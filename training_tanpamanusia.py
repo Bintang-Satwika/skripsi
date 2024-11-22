@@ -222,12 +222,8 @@ for episode in tqdm(range(1, n_episodes + 1)):
 
         # Update Networks
         if len(memory_B) > batch_size:
-            banyak_batch=int(len(memory_B)/batch_size)+1
-            #if iterasi % 10 == 0:
-                #print("banyak_batch", banyak_batch)
             mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones = take_minibatch(batch_size)
             train_step(mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones)
-            # Buat dask bag dan proses paralel
 
     print(f"\nEpisode: {episode}, Reward: {reward_satu_episode}, Iterasi: {iterasi}")
 

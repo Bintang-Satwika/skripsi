@@ -36,7 +36,7 @@ class TD3Agent:
         render_mode='human'
     ):
         """
-        Inisialisasi agent TD3 dengan hyperparameter yang dapat disesuaikan.
+        Inisialisasi agent TD3 dan hyperparameter.
         """
 
         # Set seed 
@@ -158,7 +158,7 @@ class TD3Agent:
         """
         # Pengurangan noise setiap beberapa iterasi (opsional).
         if self.iterasi % 2000 == 0:
-            self.sigma *= 0.998  # Silahkan disesuaikan
+            self.sigma *= 0.998  
 
         state_tf = tf.convert_to_tensor([state], dtype=tf.float32)
         action = self.actor(state_tf, training=False)[0]

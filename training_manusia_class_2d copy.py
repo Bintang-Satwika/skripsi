@@ -322,6 +322,8 @@ class TD3Agent:
         """
         dummy_main = False
         dummy_lateral = False
+        dummy_main_2 = False
+        dummy_lateral_2 = False
 
         # Tombol throttle utama (naik/turun)
         if keys[pygame.K_w]:
@@ -338,7 +340,7 @@ class TD3Agent:
                     self.main_throttle = min(0.0, self.main_throttle + self.throttle_rate)
                 dummy_main = True
             else:
-                return None
+                dummy_main_2 = True
 
         # Tombol throttle lateral (kiri/kanan)
         if keys[pygame.K_d]:
@@ -354,8 +356,10 @@ class TD3Agent:
                     self.lateral_throttle = min(0.0, self.lateral_throttle + self.throttle_rate)
                 dummy_lateral = True
             else:
-                return None
-
+                dummy_lateral_2 = True
+        
+        if dummy_main_2 and dummy_lateral_2:
+            return None
         # Logika toleransi step_no_keyboard_now
         # --------------------------------------
         # Jika benar-benar tidak ada tombol yg ditekan (dummy_main & dummy_lateral = True),
@@ -367,7 +371,8 @@ class TD3Agent:
         else:
             # Tombol ditekan, reset toleransi
             self.step_no_keyboard_now = self.max_step_no_keyboard
-
+        
+        
         return np.array([self.main_throttle, self.lateral_throttle], dtype=np.float32)
 
     def ask_human(self, state, action, reward_satu_episode):
@@ -390,7 +395,7 @@ class TD3Agent:
             if Is > max(self.Quen) and reward_satu_episode < self.reward_max / self.th:
                 self.human_help = True
                 self.human_step_now = self.min_human_step
-                self.step_no_keyboard_now = self.max_step_no_keyboard
+               # self.step_no_keyboard_now = self.max_step_no_keyboard
             else:
                 self.human_help = False
         else:
@@ -450,7 +455,7 @@ class TD3Agent:
                     if self.step_no_keyboard_now == 0:
                         action_human = None
 
-                    if self.human_step_now%20==0:
+                    if self.human_step_now%2==0:
                         print("\n")
                         print("human_step_now: ", self.human_step_now)
                         print("step_no_keyboard_now: ", self.step_no_keyboard_now)

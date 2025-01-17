@@ -9,7 +9,7 @@ import pickle
 import numpy as np
 
 env = gym.make("LunarLander-v3", continuous=True, gravity=-10.0,
-               enable_wind=True, wind_power=5.0, turbulence_power=0.1, render_mode='human')
+               enable_wind=True, wind_power=15.0, turbulence_power=1.5, render_mode='human')
 
 state_dim = env.observation_space.shape[0]
 action_dim = env.action_space.shape[0]
@@ -96,7 +96,7 @@ for episode in tqdm(range(1,n_episodes+1)):
     print("\nepisode:", episode, " mulai.")
     iterasi=0
     # play episode
-    while done is False and iterasi < 230:
+    while done is False and iterasi < 250:
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 running = False

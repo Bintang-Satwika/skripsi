@@ -22,7 +22,7 @@ last_press_time = {
     "main": time.time(),  # Waktu terakhir throttle utama ditekan
     "lateral": time.time()  # Waktu terakhir throttle lateral ditekan
 }
-no_press_duration = 0.5  # Durasi (dalam detik) sebelum throttle tidak dieksekusi
+no_press_duration = 1  # Durasi (dalam detik) sebelum throttle tidak dieksekusi
 
 
 def get_action(keys):

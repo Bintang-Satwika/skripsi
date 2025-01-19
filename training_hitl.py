@@ -18,10 +18,10 @@ class TD3Agent:
     def __init__(
         self,
         env_name="LunarLander-v3",
-        n_episodes=200,
+        n_episodes=100,
         save_every_episode=10,
         buffer_length=5000,
-        human_buffer_length=10000,
+        human_buffer_length=5000,
         batch_size=256,
         update_delay=2,
         lr=0.0001,
@@ -45,7 +45,7 @@ class TD3Agent:
         tf.random.set_seed(seed)
 
         # Direktori untuk menyimpan model dan buffer
-        self.save_dir = 'coba1'
+        self.save_dir = 'coba2'
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
 
@@ -61,10 +61,6 @@ class TD3Agent:
         )
         self.n_episodes = n_episodes
 
-        # Inisialisasi nilai throttle
-        self.main_throttle = 0.0
-        self.lateral_throttle = 0.0
-        self.throttle_rate = 0.1
 
         # Bungkus environment untuk merekam statistik episode
         self.env = gym.wrappers.RecordEpisodeStatistics(self.env, buffer_length=n_episodes)
@@ -102,10 +98,15 @@ class TD3Agent:
         # min_human_step = minimal step manusia harus ikut campur
         # max_step_no_keyboard = toleransi step tanpa penekanan tombol (13 step)
         # ---------------------------------------------------
-        self.min_human_step = 100
+        self.min_human_step = 50
         self.human_step_now = 0
-        self.max_step_no_keyboard = 10
+        self.max_step_no_keyboard = 5
         self.step_no_keyboard_now = 0
+        
+        # Inisialisasi nilai throttle
+        self.main_throttle = 0.0
+        self.lateral_throttle = 0.0
+        self.throttle_rate = 0.2
 
         # Inisialisasi jaringan (Actor dan Critic)
         self.actor = self.create_actor_network()
@@ -172,7 +173,9 @@ class TD3Agent:
         Memilih aksi dari target_actor lalu menambahkan noise 
         (sesuai paper TD3: target policy smoothing).
         """
+       # tf.print("\nnext_state: ", next_state.shape)
         action = self.target_actor(next_state, training=False)
+        #tf.print("action__target: ", action.shape)
         noise = tf.random.normal(
             shape=tf.shape(action),
             mean=0.0,
@@ -183,19 +186,20 @@ class TD3Agent:
         action = tf.clip_by_value(action + noise, -1.0, 1.0)
         return action
 
-    def update_memory(self, state, action, reward, next_state, done):
+    def update_RL_memory(self, state, action, reward, next_state, done):
         """
         Menyimpan transition ke replay buffer.
         """
         self.memory_B.append((state, action, reward, next_state, done))
+       # print("memory_B: ", self.memory_B)
     
-    def update_human_memory(self, state, action, reward, next_state, done):
+    def update_human_memory(self, state, action):
         """
         Menyimpan transition (human) ke replay buffer terpisah.
         """
-        self.memory_B_human.append((state, action, reward, next_state, done))
+        self.memory_B_human.append((state, action))
 
-    def take_minibatch(self):
+    def take_RL_minibatch(self):
         """
         Ambil minibatch dari replay buffer.
         """
@@ -207,9 +211,21 @@ class TD3Agent:
         mb_next_states = tf.convert_to_tensor(mb_next_states, dtype=tf.float32)
         mb_dones = tf.convert_to_tensor(mb_dones, dtype=tf.float32)
         return mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones
+    
+    def take_human_minibatch(self):
+        """
+        Ambil minibatch dari replay buffer manusia.
+        """
+        minibatch = random.sample(self.memory_B_human, self.batch_size)
+        mb_states_human, mb_actions_human= zip(*minibatch)
 
-   
-    def train_step(self, mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones):
+        mb_states_human = tf.convert_to_tensor(mb_states_human, dtype=tf.float32)
+        mb_actions_human = tf.convert_to_tensor(mb_actions_human, dtype=tf.float32)
+
+        return mb_states_human, mb_actions_human
+
+    # jangan pakek @tf.function nanti nge-bug
+    def critic_loss_RL(self, mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones):
         """
         Proses update critic dan actor sesuai TD3.
         """
@@ -217,7 +233,8 @@ class TD3Agent:
         with tf.GradientTape(persistent=True) as tape:
             # Target actions
             mb_next_actions = self.select_action_target_network(mb_next_states)
-            mb_next_actions = tf.reshape(mb_next_actions, (-1, self.action_dim))
+
+            mb_next_actions = tf.reshape(mb_next_actions, (-1, self.action_dim)) # supaya dimensi (-1,2)
 
             # Hitung target Q-value
             target_Q1 = self.target_critic_1([mb_next_states, mb_next_actions], training=False)
@@ -225,8 +242,8 @@ class TD3Agent:
             target_Q = tf.minimum(target_Q1, target_Q2)
             target_Q = tf.reshape(target_Q, (-1,))
             y = mb_rewards + (1.0 - mb_dones) * self.gamma * target_Q
-            y = tf.stop_gradient(y)
             y= tf.reshape(y, (-1,))
+            y = tf.stop_gradient(y)
             # Hitung current Q-value
             current_Q1 = self.critic_1([mb_states, mb_actions], training=True)
             current_Q2 = self.critic_2([mb_states, mb_actions], training=True)
@@ -236,7 +253,8 @@ class TD3Agent:
             # Loss Critic
             critic_1_loss = tf.reduce_mean(tf.square(y - current_Q1))
             critic_2_loss = tf.reduce_mean(tf.square(y - current_Q2))
-
+        
+        # Update Critic backprop
         critic_1_grad = tape.gradient(critic_1_loss, self.critic_1.trainable_variables)
         critic_2_grad = tape.gradient(critic_2_loss, self.critic_2.trainable_variables)
         self.critic_1_optimizer.apply_gradients(zip(critic_1_grad, self.critic_1.trainable_variables))
@@ -244,8 +262,40 @@ class TD3Agent:
 
         del tape
 
+    def critic_loss_human(self, mb_states_human, mb_actions_human):
+        # Menghitung Advantage loss
+        with tf.GradientTape(persistent=True) as tape:
+            # Q-value Dari state dan action manusia
+            Q1_human= self.critic_1([mb_states_human, mb_actions_human], training=True)
+            Q2_human = self.critic_2([mb_states_human, mb_actions_human], training=True)
+            Q1_human = tf.reshape(Q1_human, (-1,))
+            Q2_human = tf.reshape(Q2_human, (-1,))
+            
+            # Q-value dari  prediksi action oleh actor
+            actions_policy=self.actor(mb_states_human, training=True)
+            Q1_policy= self.critic_1([mb_states_human, actions_policy], training=True)
+            Q2_policy = self.critic_2([mb_states_human, actions_policy], training=True)
+            Q1_policy = tf.reshape(Q1_policy, (-1,))
+            Q2_policy = tf.reshape(Q2_policy, (-1,))
+
+            # Advantage loss
+            advantage_loss_1 = tf.reduce_mean(Q1_human - Q1_policy)
+            advantage_loss_2 = tf.reduce_mean(Q2_human - Q2_policy)
+
+        # Update Critic backprop
+        critic_1_grad = tape.gradient(advantage_loss_1, self.critic_1.trainable_variables)
+        critic_2_grad = tape.gradient(advantage_loss_2, self.critic_2.trainable_variables)
+        self.critic_1_optimizer.apply_gradients(zip(critic_1_grad, self.critic_1.trainable_variables))
+        self.critic_2_optimizer.apply_gradients(zip(critic_2_grad, self.critic_2.trainable_variables))
+
+        del tape
+
+
+
+    def actor_loss_and_update_target(self, mb_states):
         # Delayed update actor dan soft update target
         if self.iterasi % self.update_delay == 0:
+
             with tf.GradientTape() as tape:
                 actions = self.actor(mb_states, training=True)
                 actor_loss = -tf.reduce_mean(self.critic_1([mb_states, actions], training=True))
@@ -253,9 +303,10 @@ class TD3Agent:
             actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
             self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
             del tape
-
             # Soft update target networks
             self.update_target_weights()
+
+
 
     def update_target_weights(self):
         """
@@ -420,6 +471,7 @@ class TD3Agent:
             self.step_no_keyboard_now = 0
 
             while not done:
+                #print("self.iterasi: ", self.iterasi)
                 self.iterasi += 1
                 # Event handler pygame (menutup window)
                 for event in pygame.event.get():
@@ -455,12 +507,13 @@ class TD3Agent:
                     if self.step_no_keyboard_now == 0:
                         action_human = None
 
-                    if self.human_step_now%20==0:
+                    if self.human_step_now%10==0:
                         print("\n")
                         print("human_step_now: ", self.human_step_now)
                         print("step_no_keyboard_now: ", self.step_no_keyboard_now)
                         print("action_RL: ", action_RL)
                         print("action_human: ", action_human)
+
                     # Kurangi durasi minimal intervensi manusia
                     self.human_step_now = max(0, self.human_step_now - 1)
                 else:
@@ -475,16 +528,25 @@ class TD3Agent:
 
                 # Simpan ke buffer
                 if action_human is not None:
-                    self.update_human_memory(state, action_human, reward, next_state, done)
+                    self.update_human_memory(state, action_human)
                 else:
-                    self.update_memory(state, action_RL, reward, next_state, done)
+                    self.update_RL_memory(state, action_RL, reward, next_state, done)
                 
                 state = next_state
 
                 # Update network jika buffer sudah cukup
                 if len(self.memory_B) > self.batch_size:
-                    mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones = self.take_minibatch()
-                    self.train_step(mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones)
+                    # Ambil minibatch dari buffer RL
+                    mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones = self.take_RL_minibatch()
+                    self.critic_loss_RL(mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones)
+
+                    if len(self.memory_B_human) > self.batch_size:
+                        # Ambil minibatch dari buffer manusia
+                        mb_states_human, mb_actions_human = self.take_human_minibatch()
+                        self.critic_loss_human(mb_states_human, mb_actions_human)
+
+                    # Update actor dan update target network
+                    self.actor_loss_and_update_target(mb_states)
 
                 self.env.render()
 

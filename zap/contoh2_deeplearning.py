@@ -7,7 +7,7 @@ from tensorflow.keras import layers, models
 
 state_dim=8
 action_dim=2
-load_dir = 'saved_models_and_buffers_part3_sudahbagus'
+load_dir = 'zap/saved_models_and_buffers_part3_sudahbagus'
 episode_mulai = 600
 batch_size=3
 
@@ -76,9 +76,9 @@ def load_replay_buffer(filename):
     print(f'Replay buffer loaded from {filename}')
     return memory_B
 
-replay_buffer_path = os.path.join('D:\KULIAH\skripsi\coba_2a', f'replay_buffer_episode_{10}.pkl')
+#replay_buffer_path = os.path.join('D:\KULIAH\skripsi\coba_2a', f'replay_buffer_episode_{10}.pkl')
 #memory_B = load_replay_buffer(replay_buffer_path)
-memory_B = load_replay_buffer('coba_2a/replay_buffer_episode_20.pkl')
+memory_B = load_replay_buffer('zap/human_guided_3/replay_buffer_episode_10.pkl')
 def take_RL_minibatch(seed=0):
     """Ambil minibatch dari buffer RL."""
     random.seed(seed)
@@ -218,3 +218,17 @@ with tf.GradientTape() as tape:
 # actor_grad = tape.gradient(total_actor_loss, actor.trainable_variables)
 # actor_optimizer.apply_gradients(zip(actor_grad, actor.trainable_variables))
 del tape
+
+def take_last(memory_B):
+    """Ambil 1 sample terakhir dari buffer manusia."""
+    #minibatch = random.sample(memory_B, 1)
+    minibatch = [memory_B[-1]]
+    print("minibatch: ", minibatch)
+    mb_states_human, mb_actions_human, mb_rewards_human, mb_next_states, mb_dones = zip(*minibatch)
+    mb_states_human = tf.convert_to_tensor(mb_states_human, dtype=tf.float32)
+    mb_actions_human = tf.convert_to_tensor(mb_actions_human, dtype=tf.float32)
+    mb_rewards_human = tf.convert_to_tensor(mb_rewards_human, dtype=tf.float32)
+    return mb_states_human, mb_actions_human, mb_rewards_human
+print("\n")
+#print("memory_B: ", memory_B)
+print(take_last(memory_B))

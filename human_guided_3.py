@@ -46,7 +46,7 @@ class TD3Agent:
         tf.random.set_seed(seed)
 
         # Direktori untuk menyimpan model dan buffer
-        self.save_dir = 'coba_2a'
+        self.save_dir = 'human_guided_3'
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
 
@@ -61,8 +61,8 @@ class TD3Agent:
             render_mode=render_mode
         )
         self.n_episodes = n_episodes
-        self.imitation_episodes = 10
-        self.hitl_episodes = 10
+        self.imitation_episodes = 5
+        self.hitl_episodes = 50
 
         #  untuk merekam statistik episode
         self.env = gym.wrappers.RecordEpisodeStatistics(self.env, buffer_length=n_episodes)
@@ -245,9 +245,9 @@ class TD3Agent:
         """Simpan (s, a, r, s', done) ke buffer RL."""
         self.memory_B.append((state, action, reward, next_state, done))
     
-    def update_human_memory(self, state, action):
+    def update_human_memory(self, state, action, reward):
         """Simpan (s, a) dari aksi manusia ke buffer terpisah."""
-        self.memory_B_human.append((state, action))
+        self.memory_B_human.append((state, action, reward))
 
     def take_RL_minibatch(self):
         """Ambil minibatch dari buffer RL."""
@@ -260,22 +260,27 @@ class TD3Agent:
         mb_dones = tf.convert_to_tensor(mb_dones, dtype=tf.float32)
         return mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones
 
-    def take_human_minibatch(self):
+
+    def take_human_guided_minibatch(self):
         """Ambil minibatch dari buffer manusia."""
         minibatch = random.sample(self.memory_B_human, self.batch_size)
-        mb_states_human, mb_actions_human = zip(*minibatch)
+        mb_states_human, mb_actions_human, mb_rewards_human = zip(*minibatch)
         mb_states_human = tf.convert_to_tensor(mb_states_human, dtype=tf.float32)
         mb_actions_human = tf.convert_to_tensor(mb_actions_human, dtype=tf.float32)
-        return mb_states_human, mb_actions_human
+        mb_rewards_human = tf.convert_to_tensor(mb_rewards_human, dtype=tf.float32)
+        return mb_states_human, mb_actions_human, mb_rewards_human
+
 
     # ==================
     # Bagian Update TD3
     # ==================
-    # (1) Update Critic (RL)
-    def critic_loss_RL(self, mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones):
-        """
-        Proses update critic dan actor sesuai TD3 (hanya Critic).
-        """
+
+    def train_actor_critic_human_guided(self):
+
+        mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones = self.take_RL_minibatch()
+        mb_states_human, mb_actions_human, mb_rewards_human     = self.take_human_guided_minibatch()
+        weight_human= tf.divide(tf.maximum(0, mb_rewards_human - mb_rewards), tf.abs(mb_rewards_human)+ 1e-6 )
+
         with tf.GradientTape(persistent=True) as tape:
             # Target actions
             mb_next_actions = self.select_action_target_network(mb_next_states)
@@ -287,73 +292,60 @@ class TD3Agent:
             target_Q = tf.minimum(target_Q1, target_Q2)
             target_Q = tf.reshape(target_Q, (-1,))
             y = mb_rewards + (1.0 - mb_dones) * self.gamma * target_Q
-            y = tf.reshape(y, (-1,))
             y = tf.stop_gradient(y)
 
             # Hitung current Q-value
-            current_Q1 = self.critic_1([mb_states, mb_actions], training=True)
-            current_Q2 = self.critic_2([mb_states, mb_actions], training=True)
-            current_Q1 = tf.reshape(current_Q1, (-1,))
-            current_Q2 = tf.reshape(current_Q2, (-1,))
+            Q1_RL = self.critic_1([mb_states, mb_actions], training=True)
+            Q2_RL = self.critic_2([mb_states, mb_actions], training=True)
+            Q1_RL = tf.reshape(Q1_RL, (-1,))
+            Q2_RL = tf.reshape(Q2_RL, (-1,))
+
+            # Q-value Dari state + action manusia
+            Q1_human = self.critic_1([mb_states_human, mb_actions_human], training=True)
+            Q2_human = self.critic_2([mb_states_human, mb_actions_human], training=True)
+            Q1_human = tf.reshape(Q1_human, (-1,)) 
+            Q2_human = tf.reshape(Q2_human, (-1,))
+
+            # Q-value dari prediksi action oleh actor
+            mb_actions_predicted= self.actor(mb_states_human, training=True)
+            Q1_policy = self.critic_1([mb_states_human,  mb_actions_predicted], training=True)
+            Q2_policy = self.critic_2([mb_states_human,  mb_actions_predicted], training=True)
+            Q1_policy = tf.reshape(Q1_policy, (-1,))
+            Q2_policy = tf.reshape(Q2_policy, (-1,))
+
+            # Mean Advantage loss 
+            advantage_loss_1 = tf.tensordot(weight_human, tf.square(Q1_human - Q1_policy), axes=1)/self.batch_size
+            advantage_loss_2 = tf.tensordot(weight_human, tf.square(Q2_human - Q2_policy), axes=1)/self.batch_size
 
             # Loss Critic
-            critic_1_loss = tf.reduce_mean(tf.square(y - current_Q1))
-            critic_2_loss = tf.reduce_mean(tf.square(y - current_Q2))
+            critic_1_loss = tf.add(tf.reduce_mean(tf.square(y - Q1_RL)), advantage_loss_1)
+            critic_2_loss = tf.add(tf.reduce_mean(tf.square(y - Q2_RL)), advantage_loss_2)
         
         # Update Critic
         critic_1_grad = tape.gradient(critic_1_loss, self.critic_1.trainable_variables)
         critic_2_grad = tape.gradient(critic_2_loss, self.critic_2.trainable_variables)
         self.critic_1_optimizer.apply_gradients(zip(critic_1_grad, self.critic_1.trainable_variables))
         self.critic_2_optimizer.apply_gradients(zip(critic_2_grad, self.critic_2.trainable_variables))
-
         del tape
 
-    # (2) Update Critic (Human data => Advantage Loss)
-    def critic_loss_human(self, mb_states_human, mb_actions_human):
-        """
-        Menghitung 'Advantage loss' dari aksi manusia vs aksi actor di state yang sama.
-        """
-        with tf.GradientTape(persistent=True) as tape:
-            # Q-value Dari state + action manusia
-            Q1_human = self.critic_1([mb_states_human, mb_actions_human], training=True)
-            Q2_human = self.critic_2([mb_states_human, mb_actions_human], training=True)
-            Q1_human = tf.reshape(Q1_human, (-1,))
-            Q2_human = tf.reshape(Q2_human, (-1,))
-
-            # Q-value dari prediksi action oleh actor
-            actions_policy = self.actor(mb_states_human, training=True)
-            Q1_policy = self.critic_1([mb_states_human, actions_policy], training=True)
-            Q2_policy = self.critic_2([mb_states_human, actions_policy], training=True)
-            Q1_policy = tf.reshape(Q1_policy, (-1,))
-            Q2_policy = tf.reshape(Q2_policy, (-1,))
-
-            # Advantage loss (versi sederhana)
-            advantage_loss_1 = tf.reduce_mean(Q1_human - Q1_policy)
-            advantage_loss_2 = tf.reduce_mean(Q2_human - Q2_policy)
-
-        # Update Critic
-        critic_1_grad = tape.gradient(advantage_loss_1, self.critic_1.trainable_variables)
-        critic_2_grad = tape.gradient(advantage_loss_2, self.critic_2.trainable_variables)
-        self.critic_1_optimizer.apply_gradients(zip(critic_1_grad, self.critic_1.trainable_variables))
-        self.critic_2_optimizer.apply_gradients(zip(critic_2_grad, self.critic_2.trainable_variables))
-
-        del tape
-
-    # (3) Delayed update Actor + soft update target network
-    def actor_loss_and_update_target(self, mb_states):
-        # Delayed update actor dan soft update target
+        # Update Actor
         if self.iterasi % self.update_delay == 0:
             with tf.GradientTape() as tape:
                 actions = self.actor(mb_states, training=True)
                 # Minimizing -Q => maximizing Q
-                actor_loss = -tf.reduce_mean(self.critic_1([mb_states, actions], training=True))
+                actor_RL_loss = -self.critic_1([mb_states, actions], training=True)
+                mb_actions_predicted = self.actor(mb_states_human, training=True)
+                behaviour_loss = tf.square(mb_actions_human - mb_actions_predicted)
+                actor_human_loss= tf.tensordot(weight_human, behaviour_loss, axes=1)/self.batch_size
+                total_actor_loss = tf.add(tf.reduce_mean(actor_RL_loss), tf.reduce_mean(actor_human_loss))
 
-            actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
+            actor_grad = tape.gradient(total_actor_loss, self.actor.trainable_variables)
             self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
             del tape
 
             # Soft update target networks
             self.update_target_weights()
+
 
     def update_target_weights(self):
         """
@@ -398,6 +390,9 @@ class TD3Agent:
             replay_filename = os.path.join(self.save_dir, f'replay_buffer_episode_{episode}.pkl')
             with open(replay_filename, 'wb') as f:
                 pickle.dump(self.memory_B, f)
+            replay_filename_human = os.path.join(self.save_dir, f'replay_buffer_human_episode_{episode}.pkl')
+            with open(replay_filename_human, 'wb') as f:
+                pickle.dump(self.memory_B_human, f)
             print(f'Replay buffer saved to {replay_filename}')
 
         # Simpan reward kumulatif setiap episode
@@ -540,20 +535,6 @@ class TD3Agent:
     # =======================
     # Training / Main Loop
     # =======================
-    def train_actor_critic(self):
-        """
-        Memanggil update Critic & Actor jika buffer memadai.
-        """
-        # Update network jika buffer sudah cukup
-        if len(self.memory_B) > self.batch_size:
-            mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones = self.take_RL_minibatch()
-            self.critic_loss_RL(mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones)
-
-            if len(self.memory_B_human) > self.batch_size:
-                mb_states_human, mb_actions_human = self.take_human_minibatch()
-                self.critic_loss_human(mb_states_human, mb_actions_human)
-
-            self.actor_loss_and_update_target(mb_states)
 
     def main_loop(self):
         """
@@ -577,7 +558,10 @@ class TD3Agent:
             self.step_no_keyboard_now = 0
             max_iterasi_episode= 0
 
-            while not done  or max_iterasi_episode >= 350:
+            while not done:
+                if max_iterasi_episode >= 700:
+                    print("Episode: ", episode, "Terlalu lama")
+                    break
                 if self.stop_training:
                     # Jika user menekan ESC di tengah episode
                     done = True
@@ -613,7 +597,7 @@ class TD3Agent:
                     
                     action_human = self.human_in_the_loop(state, action, reward_satu_episode)
                     # PRINT
-                    if self.human_step_now%10==0:
+                    if self.human_step_now%10==0 and self.human_help:
                         print("\n")
                         print("human_step_now: ", self.human_step_now)
                         print("step_no_keyboard_now: ", self.step_no_keyboard_now)
@@ -630,7 +614,7 @@ class TD3Agent:
 
                 # Simpan ke buffer
                 if action_human is not None:
-                    self.update_human_memory(state, action_human)
+                    self.update_human_memory(state, action_human, reward)
                 else:
                     self.update_RL_memory(state, action_RL, reward, next_state, done)
                 
@@ -638,7 +622,8 @@ class TD3Agent:
                 state = next_state
 
                 # Train actor dan critic
-                self.train_actor_critic()
+                if len(self.memory_B) > self.batch_size and len(self.memory_B_human) > self.batch_size:
+                    self.train_actor_critic_human_guided()
 
                 # Render environment
                 self.env.render()

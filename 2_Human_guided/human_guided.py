@@ -539,6 +539,11 @@ class TD3Agent:
         # Jika tidak lagi di intervensi, cek apakah butuh minta bantuan
         if self.human_step_now == 0:
             self.ask_human(state, action, reward_satu_episode)
+            try:
+                self.count_ask_human[self.count_episode] += 1
+            except:
+                self.count_ask_human[self.count_episode] = 1
+
 
         # Jika perlu bantuan => ambil aksi dari keyboard
         if self.human_help:
@@ -660,7 +665,7 @@ class TD3Agent:
                     if self.iterasi%10==0:
                         print("action_human: ", action_human) 
                     # Gunakan aksi human bila tidak None, jika None => pakai aksi RL
-                    action = action_human if action_human is not None else action_RL
+                    action = action_human
 
                 elif self.imitation_episodes < episode <= self.imitation_episodes + self.hitl_episodes:
                     # Aksi RL  (tanpa bantuan manusia)
@@ -680,6 +685,9 @@ class TD3Agent:
                 else:
                     action_RL = self.select_action(state)
                     action = action_RL
+
+                    self.count_human_help[episode] = None
+                    self.count_ask_human[episode] = None
                    
 
 

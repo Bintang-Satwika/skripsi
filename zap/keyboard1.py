@@ -50,6 +50,7 @@ while running:
         action = get_action(keys)
 
         state, reward, terminated, truncated, info = env.step(action)
+        print(state.shape)
         done = terminated or truncated
 
         total_reward += reward  # Tambahkan reward saat ini ke total reward

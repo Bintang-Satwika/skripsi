@@ -46,7 +46,7 @@ class TD3Agent:
         tf.random.set_seed(seed)
 
         # Direktori untuk menyimpan model dan buffer
-        self.save_dir = '2_human_guided/saved_models_1'
+        self.save_dir = '2_human_guided/saved_models_2'
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
 

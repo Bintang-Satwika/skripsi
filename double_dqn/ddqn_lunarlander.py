@@ -34,7 +34,7 @@ class TD3Agent:
         sigma_target=0.2,
         noise_clip=0.5,
         seed=10,
-        render_mode='human'
+        render_mode=None
     ):
         """
         Inisialisasi agent TD3 dan hyperparameter.
@@ -46,7 +46,7 @@ class TD3Agent:
         tf.random.set_seed(seed)
 
         # Direktori untuk menyimpan model dan buffer
-        self.save_dir = 'double_dqn/saved_models_1'
+        self.save_dir = 'double_dqn/lunar_lander_1'
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
 
@@ -90,7 +90,6 @@ class TD3Agent:
         self.n = n
         self.save_every_episode =  save_every_episode
         self.cumulative_reward_episode = {}
-        self.human_help = False
 
         # Replay buffer
         self.memory_B = deque(maxlen=int(buffer_length))
@@ -101,8 +100,8 @@ class TD3Agent:
         self.target_dqn_network.set_weights(self.dqn_network.get_weights())
         # Optimizer
         self.dqn_optimizer = tf.keras.optimizers.Adam(learning_rate=self.lr)
-
-
+        self.epsilon=0.9
+        self.epsilon_decay=0.0025
 
         # --------------------------------------
         # Variabel untuk menangani keyboard
@@ -233,9 +232,12 @@ class TD3Agent:
         return model
     
     def train_double_dqn(self):
+        #tf.print("\n")
         mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones = self.take_RL_minibatch()
+        #tf.print("mb_actions_before: ", mb_actions)
         mb_actions = tf.cast(mb_actions, tf.int32)
-
+        # tf.print("mb_actions: ", mb_actions)
+        # tf.print("tf.one_hot(mb_actions, self.action_dim): ", tf.one_hot(mb_actions, self.action_dim))
         with tf.GradientTape() as tape:
             mb_Q_values= self.dqn_network(mb_states, training=True)
             mb_Q_values = tf.reduce_sum(mb_Q_values * tf.one_hot(mb_actions, self.action_dim), 
@@ -263,13 +265,16 @@ class TD3Agent:
         if self.iterasi % self.update_delay == 0:
             self.update_target_weights()
    
-    def select_action(self, state, epsilon=0.3):
-        if np.random.rand() < epsilon:
+    def select_action(self, state):
+        if np.random.rand() < self.epsilon:
             return random.randrange(self.action_dim)
         else:
             state_tensor = tf.convert_to_tensor([state], dtype=tf.float32)
             q_values = self.dqn_network(state_tensor)
             return int(tf.argmax(q_values[0]).numpy())
+    
+    def update_epsilon(self):
+        self.epsilon = max(0.01, self.epsilon * self.epsilon_decay)
 
     # =======================
     # Training / Main Loop
@@ -291,8 +296,6 @@ class TD3Agent:
             done = False
             reward_satu_episode = 0
             action_RL = None
-            self.human_step_now = 0
-            self.step_no_keyboard_now = 0
             max_iterasi_episode= 0
 
             while not done:
@@ -321,8 +324,10 @@ class TD3Agent:
                 if len(self.memory_B) > self.batch_size:
                     self.train_double_dqn()
                 # Render environment
-                self.env.render()
+                #self.env.render()
 
+            # Update epsilon
+            self.update_epsilon()
             print(f"\nEpisode: {episode}, Reward: {reward_satu_episode}, Iterasi: {self.iterasi}")
             # Simpan reward kumulatif
             self.cumulative_reward_episode[episode] = reward_satu_episode

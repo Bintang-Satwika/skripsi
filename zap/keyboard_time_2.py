@@ -88,6 +88,7 @@ while running:
 
         keys = pygame.key.get_pressed()
         action = get_action(keys)
+        print("Action:", action)
         state, reward, terminated, truncated, info = env.step(action)
         done = terminated or truncated
 

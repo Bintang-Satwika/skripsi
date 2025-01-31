@@ -19,7 +19,7 @@ class TD3Agent:
     def __init__(
         self,
         env_name="LunarLander-v3",
-        n_episodes=200,
+        n_episodes=400,
         save_every_episode=20,
         buffer_length=100000,
         human_buffer_length=100000,
@@ -46,7 +46,7 @@ class TD3Agent:
         tf.random.set_seed(seed)
 
         # Direktori untuk menyimpan model dan buffer
-        self.save_dir = '3_HITL/ruled_based_4'
+        self.save_dir = '3_HITL/ruled_based_5'
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
 
@@ -96,10 +96,6 @@ class TD3Agent:
         self.reward_max = 250
 
 
-        # Inisialisasi nilai throttle
-        self.main_throttle = 0.0
-        self.lateral_throttle = 0.0
-        self.throttle_rate = 0.2
 
         # Inisialisasi jaringan (Actor dan Critic)
         self.actor = self.create_actor_network()
@@ -406,7 +402,6 @@ class TD3Agent:
         #    - Kalau angle_todo > 0.05 => aksi 1 (engine kiri).
         #    - Kalau angle_todo < -0.05 => aksi 3 (engine kanan).
         #    - Sisanya => aksi 0 (diam).
-        self.main_throttle
         array_action=[0,0]
         main_threshold = 0.05
         angle_threshold = 0.05
@@ -522,7 +517,6 @@ class TD3Agent:
         if len(self.memory_B_human) > self.batch_size:
             mb_states_human, mb_actions_human, _ = self.take_human_guided_minibatch()
             # Menghitung Advantage loss
-            actions_policy=self.actor(mb_states_human, training=False)
             with tf.GradientTape(persistent=True) as tape:
                 # Q-value Dari state dan action manusia
                 Q1_human= self.critic_1([mb_states_human, mb_actions_human], training=True)
@@ -531,15 +525,15 @@ class TD3Agent:
                 Q2_human = tf.reshape(Q2_human, (-1,))
                 
                 # Q-value dari  prediksi action oleh actor
-                #actions_policy=self.actor(mb_states_human, training=True)
+                actions_policy=self.actor(mb_states_human, training=False)
                 Q1_policy= self.critic_1([mb_states_human, actions_policy], training=True)
                 Q2_policy = self.critic_2([mb_states_human, actions_policy], training=True)
                 Q1_policy = tf.reshape(Q1_policy, (-1,))
                 Q2_policy = tf.reshape(Q2_policy, (-1,))
 
                 # Advantage loss
-                advantage_loss_1 = tf.reduce_mean(Q1_human - Q1_policy)
-                advantage_loss_2 = tf.reduce_mean(Q2_human - Q2_policy)
+                advantage_loss_1 = tf.reduce_mean(tf.square(Q1_human - Q1_policy))
+                advantage_loss_2 = tf.reduce_mean(tf.square(Q2_human - Q2_policy))
 
             # Update Critic backprop
             critic_1_grad = tape.gradient(advantage_loss_1, self.critic_1.trainable_variables)

@@ -40,13 +40,11 @@ class TD3Agent:
         Inisialisasi agent TD3 dan hyperparameter.
         """
 
-        # Set seed 
-        random.seed(seed)
-        np.random.seed(seed)
-        tf.random.set_seed(seed)
 
         # Direktori untuk menyimpan model dan buffer
-        self.save_dir = '1_TD3_origin/saved_models_2'
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        self.save_dir = 'dummy'
+        self.save_dir = os.path.join(current_dir, self.save_dir)
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
 
@@ -231,6 +229,9 @@ class TD3Agent:
     def take_RL_minibatch(self):
         """Ambil minibatch dari buffer RL."""
         minibatch = random.sample(self.memory_B, self.batch_size)
+        if self.iterasi < 260:
+            print("\n\n\n")
+            print("minibatch: ", minibatch)
         mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones = zip(*minibatch)
         mb_states = tf.convert_to_tensor(mb_states, dtype=tf.float32)
         mb_actions = tf.convert_to_tensor(mb_actions, dtype=tf.float32)

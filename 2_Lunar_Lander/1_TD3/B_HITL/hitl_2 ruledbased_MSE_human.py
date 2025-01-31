@@ -40,11 +40,6 @@ class TD3Agent:
         Inisialisasi agent TD3 dan hyperparameter.
         """
 
-        # Set seed 
-        random.seed(seed)
-        np.random.seed(seed)
-        tf.random.set_seed(seed)
-
         # Direktori untuk menyimpan model dan buffer
         self.save_dir = '3_HITL/ruled_based_5'
         if not os.path.exists(self.save_dir):

@@ -40,10 +40,6 @@ class TD3Agent:
         Inisialisasi agent TD3 dan hyperparameter.
         """
 
-        # Set seed 
-        random.seed(seed)
-        np.random.seed(seed)
-        tf.random.set_seed(seed)
 
         # Direktori untuk menyimpan model dan buffer
         self.save_dir = 'double_dqn/lunar_lander_hitl_2'

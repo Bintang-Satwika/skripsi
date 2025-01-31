@@ -7,7 +7,7 @@ from tensorflow.keras import layers, models
 
 # Environment settings
 ENV_NAME = "LunarLander-v3"
-RENDER_MODE = "human"
+RENDER_MODE = None
 N_EPISODES = 10
 EPISODE_START = 400
 
@@ -27,8 +27,12 @@ ACTION_DIM = env.action_space.shape[0]
 print(f"State Dim: {STATE_DIM}, Action Dim: {ACTION_DIM}")
 
 # Model directory
+# Get the current directory
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_DIR = os.path.join(CURRENT_DIR, "saved_models_2_final")
+
+# Get the parent directory of the current directory
+PARENT_DIR = os.path.dirname(CURRENT_DIR)
+MODEL_DIR = os.path.join(PARENT_DIR, "B_HITL\\ruled_based_5\\ruled_based_5_part2")
 
 # Model creation functions
 def create_actor_network():
@@ -94,19 +98,20 @@ def select_action(state):
     return np.clip(action, -1, 1)
 
 # Running environment
-def run_env(num_episodes=10, render=True):
+def run_env(num_episodes, render):
     rewards = {}
 
     for episode in range(1, num_episodes + 1):
-        obs, _ = env.reset(seed=episode)
+        obs, info = env.reset(seed=1000+episode)
         episode_reward = 0
         done, truncated = False, False
 
         while not (done or truncated):
             action = select_action(obs)
-            obs, reward, done, truncated, _ = env.step(action)
+            obs, reward, done, truncated, info = env.step(action)
             episode_reward += reward
-            env.render()
+            #env.render()
+        print("info:", info)
 
         rewards[episode] = episode_reward
         print(f"Episode {episode}, Total Reward = {episode_reward:.2f}")
@@ -114,12 +119,13 @@ def run_env(num_episodes=10, render=True):
     env.close()
 
     # Save rewards to JSON
-    file_path = os.path.join(CURRENT_DIR, "TD3_testing_without_noise_cumulative_rewards.json")
+    file_path = os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_TD3_HITL_without_noise.json")
+    #file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_TD3_HITL_noise.json")
     with open(file_path, "w") as f:
         json.dump(rewards, f, indent=4)
 
     return rewards
 
 if __name__ == "__main__":
-    all_rewards = run_env(num_episodes=100, render=True)
+    all_rewards = run_env(num_episodes=100, render=False)
     print("Average Reward:", np.mean(list(all_rewards.values())))

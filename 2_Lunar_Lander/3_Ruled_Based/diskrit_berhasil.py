@@ -1,5 +1,7 @@
 import gymnasium as gym
 import numpy as np
+import os
+import json
 
 def rule_based_policy(state):
     """
@@ -64,32 +66,46 @@ def rule_based_policy(state):
         return 0   # diam (NOP)
 
 
-env = gym.make("LunarLander-v3", render_mode='human')  # Env diskret
-def run_rule_based_lander(num_episodes=5, render=True, seed=42):
-    rewards = []
+def run_rule_based_lander(num_episodes=10, render=True, seed=42, env_name="LunarLander-v3", render_mode=None):
+    env = gym.make(
+        env_name, 
+        continuous=False,
+        gravity=-10.0,
+        enable_wind=False,
+        wind_power=0,
+        turbulence_power=0,
+        render_mode=render_mode
+    )
+    rewards = {}
 
-    for episode in range(num_episodes):
-        obs, _ = env.reset(seed=seed + episode)
+    for episode in range(1, num_episodes+1):
+        obs, _ = env.reset(seed=1000+episode)
         episode_reward = 0
         done = False
         truncated = False
 
         while not (done or truncated):
-            action = rule_based_policy(obs)
+            action= rule_based_policy(obs)
             obs, reward, done, truncated, info = env.step(action)
             episode_reward += reward
 
-           
-            env.render()
-
-        rewards.append(episode_reward)
-        print(f"Episode {episode+1}, total_reward={episode_reward:.2f}")
+        rewards[episode] = episode_reward
+        print(f"Episode {episode}, total_reward={episode_reward:.2f}")
 
     env.close()
+    
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(current_directory, "Testing_cumulative_rewards_ruled_based_diskrit_without_noise.json")
+    #file_path= os.path.join(current_directory, "Testing_cumulative_rewards_ruled_based_diskrit_noise.json")
+    
+    with open(file_path, "w") as f:
+        json.dump(rewards, f, indent=4)
+    
     return rewards
 
 
 if __name__ == "__main__":
     # Jalankan contoh
     all_rewards = run_rule_based_lander(num_episodes=100, render=True)
-    print("Rata-rata reward:", np.mean(all_rewards))
+    #print("all_rewards:", all_rewards)
+    #print("Rata-rata reward:", np.mean(all_rewards))

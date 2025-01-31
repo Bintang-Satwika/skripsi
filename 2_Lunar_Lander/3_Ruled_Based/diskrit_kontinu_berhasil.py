@@ -44,15 +44,15 @@ def run_rule_based_lander(num_episodes=10, render=True, seed=42, env_name="Lunar
         env_name, 
         continuous=True,
         gravity=-10.0,
-        enable_wind=False,
-        wind_power=0,
-        turbulence_power=0,
+        enable_wind=True,
+        wind_power=15,
+        turbulence_power=1.5,
         render_mode=render_mode
     )
     rewards = {}
 
     for episode in range(1, num_episodes+1):
-        obs, _ = env.reset(seed=episode)
+        obs, _ = env.reset(seed=1000+episode)
         episode_reward = 0
         done = False
         truncated = False
@@ -68,7 +68,8 @@ def run_rule_based_lander(num_episodes=10, render=True, seed=42, env_name="Lunar
     env.close()
     
     current_directory = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(current_directory, "rule_based_without_noise_cumulative_rewards.json")
+    #file_path = os.path.join(current_directory, "Testing_cumulative_rewards_ruled_based_without_noise.json")
+    file_path= os.path.join(current_directory, "Testing_cumulative_rewards_ruled_based_noise.json")
     
     with open(file_path, "w") as f:
         json.dump(rewards, f, indent=4)

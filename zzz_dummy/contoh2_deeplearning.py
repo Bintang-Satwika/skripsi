@@ -7,7 +7,7 @@ from tensorflow.keras import layers, models
 
 state_dim=8
 action_dim=2
-load_dir = 'zap/saved_models_and_buffers_part3_sudahbagus'
+load_dir = 'zzz_dummy/saved_models_and_buffers_part3_sudahbagus'
 episode_mulai = 600
 batch_size=3
 
@@ -78,7 +78,7 @@ def load_replay_buffer(filename):
 
 #replay_buffer_path = os.path.join('D:\KULIAH\skripsi\coba_2a', f'replay_buffer_episode_{10}.pkl')
 #memory_B = load_replay_buffer(replay_buffer_path)
-memory_B = load_replay_buffer('zap/human_guided_3/replay_buffer_episode_10.pkl')
+memory_B = load_replay_buffer('zzz_dummy/human_guided_3/replay_buffer_episode_10.pkl')
 def take_RL_minibatch(seed=0):
     """Ambil minibatch dari buffer RL."""
     random.seed(seed)

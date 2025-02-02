@@ -44,9 +44,9 @@ def run_rule_based_lander(num_episodes=10, render=True, seed=42, env_name="Lunar
         env_name, 
         continuous=True,
         gravity=-10.0,
-        enable_wind=True,
-        wind_power=15,
-        turbulence_power=1.5,
+        enable_wind=False,
+        wind_power=0,
+        turbulence_power=0,
         render_mode=render_mode
     )
     rewards = {}
@@ -68,8 +68,8 @@ def run_rule_based_lander(num_episodes=10, render=True, seed=42, env_name="Lunar
     env.close()
     
     current_directory = os.path.dirname(os.path.abspath(__file__))
-    #file_path = os.path.join(current_directory, "Testing_cumulative_rewards_ruled_based_without_noise.json")
-    file_path= os.path.join(current_directory, "Testing_cumulative_rewards_ruled_based_noise.json")
+    file_path = os.path.join(current_directory, "Testing_cumulative_rewards_ruled_based_without_noise_400episode.json")
+    #file_path= os.path.join(current_directory, "Testing_cumulative_rewards_ruled_based_noise.json")
     
     with open(file_path, "w") as f:
         json.dump(rewards, f, indent=4)
@@ -77,5 +77,5 @@ def run_rule_based_lander(num_episodes=10, render=True, seed=42, env_name="Lunar
     return rewards
 
 if __name__ == "__main__":
-    all_rewards = run_rule_based_lander(num_episodes=100, render=True)
+    all_rewards = run_rule_based_lander(num_episodes=400, render=True)
     print("Rata-rata reward:", np.mean(list(all_rewards.values())))

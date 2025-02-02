@@ -8,7 +8,6 @@ from tensorflow.keras import layers, models
 # Environment settings
 ENV_NAME = "LunarLander-v3"
 RENDER_MODE = None
-N_EPISODES = 10
 EPISODE_START = 400
 
 # Initialize environment
@@ -16,9 +15,9 @@ env = gym.make(
     ENV_NAME,
     continuous=False,
     gravity=-10.0,
-    enable_wind=False,
-    wind_power=0,
-    turbulence_power=0,
+    enable_wind=True,
+    wind_power=15,
+    turbulence_power=1.5,
     render_mode=RENDER_MODE
 )
 
@@ -32,7 +31,8 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Get the parent directory of the current directory
 PARENT_DIR = os.path.dirname(CURRENT_DIR)
-MODEL_DIR = os.path.join(PARENT_DIR, "B_HITL", "lunar_lander_hitl_2")
+#MODEL_DIR = os.path.join(PARENT_DIR, "B_HITL", "lunar_lander_hitl_2")
+MODEL_DIR = os.path.join(PARENT_DIR, "C_Human_Guided", "HG_saved_models_1", "HG_saved_models_1_part2")
 
 class DDQNLoader:
     def __init__(self, state_dim, action_dim, load_dir='file_path'):
@@ -101,8 +101,10 @@ def run_env(num_episodes, render):
     env.close()
 
     # Save rewards to JSON
-    file_path = os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_DDQN_HITL_without_noise.json")
+    #file_path = os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_DDQN_HITL_without_noise.json")
     #file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_DDQN_HITL_noise.json")
+    #file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_DDQN_HG_without_noise.json")
+    file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_DDQN_HG_noise.json")
     with open(file_path, "w") as f:
         json.dump(rewards, f, indent=4)
 

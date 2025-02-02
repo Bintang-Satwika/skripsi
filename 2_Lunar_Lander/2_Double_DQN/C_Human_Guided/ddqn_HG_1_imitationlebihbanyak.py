@@ -44,7 +44,7 @@ class TD3Agent:
 
 
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        self.save_dir = 'HG_saved_models_1'
+        self.save_dir = 'HG_saved_models_2'
         self.save_dir = os.path.join(current_dir, self.save_dir)
 
         if not os.path.exists(self.save_dir):

@@ -20,6 +20,9 @@ class Agent:
         self.processing_time_remaining = 0
         self.pending_reinsertion = False
 
+        # baru
+        self.workbench = False
+
     def build_state(self):
         """
         Membangun representasi state sebagai numpy array.
@@ -41,17 +44,23 @@ class Agent:
         self.processing_time_remaining = math.ceil(self.base_processing_time / self.speed)
         self.status = 1  # Mulai memproses
 
+    # def process(self, job_details):
+    #     """
+    #     Mengurangi waktu pemrosesan setiap timestep.
+    #     Jika waktu pemrosesan habis, operasi selesai.
+    #     """
+    #     if self.current_job is not None:
+    #         if self.processing_time_remaining > 0:
+    #             self.processing_time_remaining -= 1
+    #             return None
+    #         if self.processing_time_remaining == 0:
+    #             # Selesaikan operasi: keluarkan operasi pertama dari job.
+    #             if self.current_job in job_details and len(job_details[self.current_job]) > 0:
+    #                 return job_details[self.current_job].pop(0)
+    #     return None
+
     def process(self, job_details):
-        """
-        Mengurangi waktu pemrosesan setiap timestep.
-        Jika waktu pemrosesan habis, operasi selesai.
-        """
-        if self.current_job is not None:
-            if self.processing_time_remaining > 0:
-                self.processing_time_remaining -= 1
-                return None
-            if self.processing_time_remaining == 0:
-                # Selesaikan operasi: keluarkan operasi pertama dari job.
-                if self.current_job in job_details and len(job_details[self.current_job]) > 0:
-                    return job_details[self.current_job].pop(0)
-        return None
+        print("job_details: ", job_details)
+        print("job_details[self.workbench]: ", job_details[self.workbench])
+        if self.workbench in job_details and len(job_details[self.workbench]) > 0:
+                return job_details[self.workbench].pop(0)

@@ -30,7 +30,7 @@ class FJSPEnv(gym.Env):
 
         # Konfigurasi agen
         # Fixed positions (indeks 0-based): Agent1:3, Agent2:7, Agent3:11
-        self.agent_positions = [3, 7, 11]
+        self.agent_positions = [3, 3+1+self.window_size, 3+1*2+self.window_size*2]
         self.agent_operation_capability = [[1,2], [2,3], [1,3]]
         self.agent_speeds = [1, 2, 0.5]  # Agent2 2x lebih cepat; Agent3 2x lebih lambat
         self.base_processing_times = [6, 4, 2]  # Contoh waktu dasar untuk tiap agen
@@ -146,11 +146,10 @@ class FJSPEnv(gym.Env):
         self.step_count += 1
 
         # 1. Generate job baru (jika kurang dari kapasitas maksimum) dan gerakkan conveyor.
-        self.conveyor.move_conveyor()
         self.conveyor.generate_jobs()
 
         # 2. Lakukan aksi dari tiap agen
-        self.logic_action(actions)
+        #self.logic_action(actions)
 
         observation_all= self._get_obs()
         next_observation_all=[]
@@ -160,11 +159,26 @@ class FJSPEnv(gym.Env):
             print("Agent-", i, end=": ")
             print(observation)
             status_location=np.array(self.agent_operation_capability).shape[1]+2
-            if actions[i] == 0:
-                print("ACCEPT")
-                observation[status_location]=1
 
-                self.conveyor.conveyor[yr] = None
+            if actions[i] == 0:
+                req_ops = self.conveyor.job_details.get(self.conveyor.conveyor[yr], [])
+
+                if self.conveyor.conveyor[yr] is not None and  req_ops[0] in agent.operation_capability:
+                    print("ACCEPT")
+                    print("req_ops: ", req_ops)
+                    observation[status_location]=1
+                    agent.workbench=self.conveyor.conveyor[yr]
+                    print("self.conveyor.conveyor[yr]", self.conveyor.conveyor[yr])
+                    print("self.conveyor.job_details: ", self.conveyor.job_details)
+                    print("agent.workbench: ", agent.workbench)
+                    
+                    if agent.workbench in self.conveyor.job_details and len(self.conveyor.job_details[agent.workbench]) > 0:
+                       self.conveyor.job_details[agent.workbench].pop(0)
+
+                    self.conveyor.conveyor[yr] = None
+                else:
+                    print("FAILED ACTION")
+
             elif actions[i] == 1:
                 print("WAIT")
             elif actions[i] == 2:
@@ -172,7 +186,12 @@ class FJSPEnv(gym.Env):
             elif actions[i] == 3:
                 print("CONTINUE")
 
+            self.agents[i]=agent
+
             next_observation_all.append(observation)
+        # for idx, agent in enumerate(self.agents):
+        #     print(f"Agent-{idx} workbench: {agent.workbench}")
+        next_observation_all=np.array(next_observation_all)
         
             
 
@@ -182,6 +201,7 @@ class FJSPEnv(gym.Env):
         truncated = False
         info = {"actions": actions}
         print("next_observation_all: ", next_observation_all)
+        self.conveyor.move_conveyor()
 
         return next_observation_all, reward, done, truncated, info
 

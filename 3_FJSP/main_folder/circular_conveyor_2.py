@@ -3,7 +3,6 @@ import random
 import math
 
 
-
 class CircularConveyor:
     def __init__(self, num_sections: int, max_capacity: int, arrival_rate:float, num_agents: int, n_jobs: int):
         self.num_sections = num_sections            # Total number of sections
@@ -80,15 +79,16 @@ class CircularConveyor:
         print("Buffer:", self.buffer_jobs)
         print("Completed Products:", self.product_completed)
 
-# # Example Simulation
-conveyor = CircularConveyor(num_sections=12, max_capacity=0.75, arrival_rate=0.3, num_agents=3, n_jobs=20)
+# # # Example Simulation
+if __name__ == "__main__":
+    conveyor = CircularConveyor(num_sections=12, max_capacity=0.75, arrival_rate=0.3, num_agents=3, n_jobs=20)
 
-for timestep in range(20):  # Run simulation
-    print(f"Time Step {timestep + 1}")
-    conveyor.move_conveyor()
-    conveyor.generate_jobs()
-    conveyor.display()
-    print()
+    for timestep in range(20):  # Run simulation
+        print(f"Time Step {timestep + 1}")
+        conveyor.move_conveyor()
+        conveyor.generate_jobs()
+        conveyor.display()
+        print()
 
-print("Total Jobs Generated:", conveyor.total_jobs)
-print("Buffer:", conveyor.buffer_jobs)
+    print("Total Jobs Generated:", conveyor.total_jobs)
+    print("Buffer:", conveyor.buffer_jobs)

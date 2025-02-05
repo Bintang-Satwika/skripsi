@@ -8,12 +8,11 @@ class CircularConveyor:
         self.arrival_rate = arrival_rate  # Poisson job arrival rate
         self.conveyor = [None] * num_sections  # Initialize empty conveyor
         self.buffer_jobs = []  # Buffer for excess jobs
-        self.total_jobs = {"A": 0, "B": 0, "C": 0, "D":0}  # Job counters for each product type
+        self.total_jobs = {"A": 0, "B": 0, "C": 0}  # Job counters for each product type
         self.product_operations = {
             "A": [1, 2, 3],  # Operations for Product A
             "B": [2, 3],     # Operations for Product B
             "C": [1, 2],      # Operations for Product C
-            "D": [3]            # Operations for Product D
 
         }
         self.job_details = {}  # Store job-specific operation sequences
@@ -42,6 +41,7 @@ class CircularConveyor:
 
     def generate_jobs(self):
         """ Generates jobs based on a Poisson process """
+        np.random.seed(10)
         a_job = np.random.poisson(self.arrival_rate)  # Poisson-distributed arrivals
         for _ in range(a_job):
             if sum(x is not None for x in self.conveyor) < self.max_capacity * self.num_sections:

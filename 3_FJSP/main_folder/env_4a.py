@@ -47,7 +47,7 @@ class FJSPEnv(gym.Env):
             self.agents.append(agent)
 
         # Ruang observasi: tiap agen memiliki state vektor berukuran 8.
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_agents, 3+2+self.window_size), dtype=np.int16)
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_agents, 3+2+self.window_size), dtype=np.float32)
 
         # ---------------------------------------------------------------------
         # Perbaikan di sini: kita definisikan aksi sesuai gambar:
@@ -81,22 +81,8 @@ class FJSPEnv(gym.Env):
             )
             self.agents.append(agent)
         return self._get_obs(), {}
-
-    def step(self, actions):
-        """
-        actions: array dengan panjang num_agents, masing-masing aksi dalam {0,1,2,3}
-          0: ACCEPT  ambil job di yr position
-          1: WAIT    menunggu  untuk section conveyor sebelum yr dan sesuai panjang window size -1
-          2: DECLINE menolak job di yr position
-          3: CONTINUE default jika sedang memproses/tidak ada job
-        """
-        
-        self.step_count += 1
-
-        # 1. Generate job baru (jika kurang dari kapasitas maksimum) dan gerakkan conveyor.
-        self.conveyor.move_conveyor()
-        self.conveyor.generate_jobs()
-
+    
+    def logic_action(self, action):
         # 2. Untuk tiap agen yang sedang idle, periksa job di fixed position.
         for i, agent in enumerate(self.agents):
             print("Agent-", i, end=": ")
@@ -147,14 +133,57 @@ class FJSPEnv(gym.Env):
                         # Jika slot penuh, agen menunggu
                         pass
 
-        obs = self._get_obs()
+
+    def step(self, actions):
+        """
+        actions: array dengan panjang num_agents, masing-masing aksi dalam {0,1,2,3}
+          0: ACCEPT  ambil job di yr position
+          1: WAIT    menunggu  untuk section conveyor sebelum yr dan sesuai panjang window size -1
+          2: DECLINE menolak job di yr position
+          3: CONTINUE default jika sedang memproses/tidak ada job
+        """
+        
+        self.step_count += 1
+
+        # 1. Generate job baru (jika kurang dari kapasitas maksimum) dan gerakkan conveyor.
+        self.conveyor.move_conveyor()
+        self.conveyor.generate_jobs()
+
+        # 2. Lakukan aksi dari tiap agen
+        self.logic_action(actions)
+
+        observation_all= self._get_obs()
+        next_observation_all=[]
+        for i, agent in enumerate(self.agents):
+            observation=observation_all[i]
+            yr = agent.position
+            print("Agent-", i, end=": ")
+            print(observation)
+            status_location=np.array(self.agent_operation_capability).shape[1]+2
+            if actions[i] == 0:
+                print("ACCEPT")
+                observation[status_location]=1
+
+                self.conveyor.conveyor[yr] = None
+            elif actions[i] == 1:
+                print("WAIT")
+            elif actions[i] == 2:
+                print("DECLINE")
+            elif actions[i] == 3:
+                print("CONTINUE")
+
+            next_observation_all.append(observation)
+        
+            
+
         # Contoh reward: negatif dari panjang buffer.
         reward = -len(self.conveyor.buffer_jobs)
         done = self.step_count >= self.max_steps
         truncated = False
         info = {"actions": actions}
+        print("next_observation_all: ", next_observation_all)
 
-        return obs, reward, done, truncated, info
+        return next_observation_all, reward, done, truncated, info
 
     def render(self, mode="human"):
        # print(f"Time Step: {self.step_count}")
@@ -166,12 +195,12 @@ class FJSPEnv(gym.Env):
 
 if __name__ == "__main__":
     env = FJSPEnv(window_size=3, num_agents=3, max_steps=50)
-    obs, info = env.reset(seed=42)
+    state, info = env.reset(seed=42)
     env.render()
     total_reward = 0
     done = False
     truncated = False
-    print("Initial Observation:", obs)
+    print("Initial Observation:", state)
     while not done and not truncated:
         print("\nStep:", env.step_count)
         # Untuk contoh, gunakan aksi acak
@@ -179,10 +208,10 @@ if __name__ == "__main__":
         actions=[0]*3
         
         print("Actions:", actions)
-        obs, reward, done, truncated, info = env.step(actions)
+        next_state, reward, done, truncated, info = env.step(actions)
         print("Reward:", reward)
-
         env.render()
         total_reward += reward
         print("-" * 50)
+        state = next_state
     print("Episode complete. Total Reward:", total_reward)

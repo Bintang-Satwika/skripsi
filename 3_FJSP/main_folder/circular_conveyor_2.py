@@ -35,7 +35,7 @@ class CircularConveyor:
         job_label = f"{product_type}-{self.total_jobs[product_type]}"
         # Copy the product's operation list so each job’s sequence is independent.
         self.job_details[job_label] = self.product_operations[product_type][:]
-        print("job_details:", self.job_details)
+        #print("job_details:", self.job_details)
         # Insert the job into section 0 if available; otherwise, add to the buffer.
         if (sum(1 for x in self.conveyor if x is not None) < self.max_capacity * self.num_sections and 
             self.conveyor[0] is None and 

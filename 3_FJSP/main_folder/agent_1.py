@@ -29,7 +29,8 @@ class Agent:
         return np.hstack([
             np.array([self.position]),
             self.operation_capability,
-            np.array([self.operation_now, self.status]),
+            np.array([self.operation_now, 
+                      self.status]),
             self.remaining_operation
         ])
 

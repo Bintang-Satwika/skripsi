@@ -88,6 +88,8 @@ if __name__ == "__main__":
         conveyor.move_conveyor()
         conveyor.generate_jobs()
         conveyor.display()
+        print(conveyor.conveyor)
+        print(conveyor.job_details.get("A-1"))
         print()
 
     print("Total Jobs Generated:", conveyor.total_jobs)

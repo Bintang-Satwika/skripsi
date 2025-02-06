@@ -153,62 +153,54 @@ class FJSPEnv(gym.Env):
 
         observation_all= self._get_obs()
         next_observation_all=[]
-        for i, agent in enumerate(self.agents):
-            observation=observation_all[i]
-            yr = agent.position
-            print("Agent-", i, end=": ")
-            print(observation)
-            status_location=np.array(self.agent_operation_capability).shape[1]+2
 
-            if actions[i] == 0:
-                '''
-                ACCEPT
-                1. cek apakah job di conveyor di posisi agent saat ini (yr) ada atau tidak
-                2. cek apakah job tersebut sesuai dengan operation capability agent
-                3. cek apakah status agent saat ini adalah idle
-                4. jika ya, maka agent mengambil job tersebut dan memindahkan dari conveyor ke workbench
-                5. conveyor pada yr akan kosong 
-                6. state status agent berubah dari idle menjadi accept
-                7. state remaining operation berubah
-                8. jika syarat tidak terpenuhi, maka tidak ada perubahan dari timestep sebelumnya
-                '''
-                req_ops = self.conveyor.job_details.get(self.conveyor.conveyor[yr], [])
+        status_location = np.array(self.agent_operation_capability).shape[1] + 2
 
-                if self.conveyor.conveyor[yr] is not None and  req_ops[0] in agent.operation_capability and observation[status_location]==1:
-                    print("ACCEPT")
-                    print("req_ops: ", req_ops)
-                    observation[status_location]=2 # w
-                    agent.workbench=self.conveyor.conveyor[yr]
-                    print("self.conveyor.conveyor[yr]", self.conveyor.conveyor[yr])
-                    print("self.conveyor.job_details: ", self.conveyor.job_details)
-                    print("agent.workbench: ", agent.workbench)
+        # Asumsikan actions adalah numpy array dengan shape (3,)
+        # Buat array posisi agent dari self.agents (misalnya agent.position berupa integer)
+        yr = np.array([agent.position for agent in self.agents])
+        print("yr: ", yr)
+
+        # Jika self.conveyor.conveyor sudah berupa array, kita bisa ambil itemnya langsung:
+        if actions[i] == 0:
+            yr_jobs =  np.array(self.conveyor.conveyor)[yr]
+            print("yr_jobs: ", yr_jobs)
+        # for i, agent in enumerate(self.agents):
+        #     observation=observation_all[i]
+        #     yr = agent.position
+        #     print("Agent-", i, end=": ")
+        #     print(observation)
+        #     status_location=np.array(self.agent_operation_capability).shape[1]+2
+
+        #     if actions[i] == 0:
+        #         req_ops = self.conveyor.job_details.get(self.conveyor.conveyor[yr], [])
+
+        #         if self.conveyor.conveyor[yr] is not None and  req_ops[0] in agent.operation_capability:
+        #             print("ACCEPT")
+        #             print("req_ops: ", req_ops)
+        #             observation[status_location]=1
+        #             agent.workbench=self.conveyor.conveyor[yr]
+        #             print("self.conveyor.conveyor[yr]", self.conveyor.conveyor[yr])
+        #             print("self.conveyor.job_details: ", self.conveyor.job_details)
+        #             print("agent.workbench: ", agent.workbench)
                     
-                    if agent.workbench in self.conveyor.job_details and len(self.conveyor.job_details[agent.workbench]) > 0:
-                       self.conveyor.job_details[agent.workbench].pop(0)
+        #             if agent.workbench in self.conveyor.job_details and len(self.conveyor.job_details[agent.workbench]) > 0:
+        #                self.conveyor.job_details[agent.workbench].pop(0)
 
-                    self.conveyor.conveyor[yr] = None
-                else:
-                    print("FAILED ACTION")
+        #             self.conveyor.conveyor[yr] = None
+        #         else:
+        #             print("FAILED ACTION")
 
-            elif actions[i] == 1:
-                '''
-                WAIT
-                1. cek apakah status agent saat ini adalah idle
-                2. jika ya, maka agent memberikan action wait untuk job pada yr-1 hingga yr-window_size+1
-                3. state remaining operation berubah
-                4. jika tidak, maka tidak ada perubahan dari timestep sebelumnya
-                '''
-                print("WAIT")
-                if observation[status_location]==0:
-                    wait= True
-            elif actions[i] == 2:
-                print("DECLINE")
-            elif actions[i] == 3:
-                print("CONTINUE")
+        #     elif actions[i] == 1:
+        #         print("WAIT")
+        #     elif actions[i] == 2:
+        #         print("DECLINE")
+        #     elif actions[i] == 3:
+        #         print("CONTINUE")
 
-            self.agents[i]=agent
+        #     self.agents[i]=agent
 
-            next_observation_all.append(observation)
+        #     next_observation_all.append(observation)
         # for idx, agent in enumerate(self.agents):
         #     print(f"Agent-{idx} workbench: {agent.workbench}")
         next_observation_all=np.array(next_observation_all)

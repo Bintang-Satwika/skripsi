@@ -118,7 +118,6 @@ class FJSPEnv(gym.Env):
                         b. state operation berubah dari 0 menjadi operation ke-1 atau ke-2 atau ke-3
                         c. state remaining operation bergeser sesuai window size
                     
-
                 B. saat job masih diconveyor yr
                     1. cek:
                         a.apakah job di conveyor di posisi agent saat ini (yr) ada atau tidak
@@ -129,10 +128,11 @@ class FJSPEnv(gym.Env):
                     4. State:
                         a. state status agent berubah dari idle menjadi accept
                         b. state remaining operation bergeser sesuai window size
+                        c. state operation sekarang harus 0 (nol)
                     5. jika syarat tidak terpenuhi, maka tidak ada perubahan dari timestep sebelumnya
                 '''
                 if agent.workbench and observation[status_location]==1:
-                    print("masuk sini")
+
                     observation[status_location]=2 # accept menjadi working
                     list_operation=list(agent.workbench.values())[0] # karena [[1,2.3]] jadi [1,2,3]
                     print("list_operation: ", list_operation)
@@ -140,35 +140,28 @@ class FJSPEnv(gym.Env):
                     if list_operation[0] in agent.operation_capability:
                         first_operation=agent.operation_capability[0]
                         second_operation=agent.operation_capability[1]
-                        a=np.where(list_operation[0]==first_operation, first_operation, second_operation)
-                        print("a: ", a)
-                        pass
+                        select_operation=np.where(list_operation[0]==first_operation, first_operation, second_operation)
+                        print("select_operation: ", select_operation )
+                        observation[1+self.agent_many_operations]=select_operation
+                    else:
+                        print("FAILED ACTION: operation capability is False")
             
                 elif not agent.workbench:
                     req_ops = self.conveyor.job_details.get(self.conveyor.conveyor[yr], [])
 
                     if self.conveyor.conveyor[yr] is not None and  req_ops[0] in agent.operation_capability and observation[status_location]==0:
                         print("ACCEPT")
-                        print("req_ops: ", req_ops)
                         observation[status_location]=1 # idle menjadi accept
                         agent.workbench["%s"%self.conveyor.conveyor[yr]]=req_ops
                         self.conveyor.conveyor[yr] = None
                         # dummy= agent.process(self.conveyor.job_details)
                         # print("agent process on workbench: ", dummy)
+                        observation[1+self.agent_many_operations]=0
                     else:
                         print("FAILED ACTION: agent workbench is False")
 
                 else:
                     print("FAILED ACTION: workbench is not Empty.")
-            
-                   
-                    # if len(req_ops) > 0:
-                    #     req_op = req_ops[0]
-                    #     if req_op in agent.operation_capability:
-                    #         agent.current_job = agent.workbench
-                    #         agent.workbench = None
-                    #         agent.start_job()
-                    #         observation[status_location]=2 # 
 
 
             elif actions[i] == 1:
@@ -214,8 +207,8 @@ class FJSPEnv(gym.Env):
         """
         actions: array dengan panjang num_agents, masing-masing aksi dalam {0,1,2,3}
           0: ACCEPT  ambil job di yr position
-          1: WAIT    menunggu  untuk section conveyor sebelum yr dan sesuai panjang window size -1
-          2: DECLINE menolak job di yr position
+          1: WAIT    menunggu  untuk section conveyor yr-1 hingga yr-window_size+1
+          2: DECLINE menolak job di yr position dan tidak menunggu yr-1 hingga yr-window_size+1
           3: CONTINUE default jika sedang memproses/tidak ada job
         """
         self.step_count += 1

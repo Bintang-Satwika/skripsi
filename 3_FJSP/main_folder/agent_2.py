@@ -21,7 +21,7 @@ class Agent:
         self.pending_reinsertion = False
 
         # baru
-        self.workbench = False
+        self.workbench = {}
 
     def build_state(self):
         """

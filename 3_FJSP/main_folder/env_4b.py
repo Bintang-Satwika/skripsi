@@ -34,6 +34,7 @@ class FJSPEnv(gym.Env):
         # Fixed positions (indeks 0-based): Agent1:3, Agent2:7, Agent3:11
         self.agent_positions = [3, 3+1+self.window_size, 3+1*2+self.window_size*2]
         self.agent_operation_capability = [[1,2], [2,3], [1,3]]
+        self.agent_many_operations= 2
         self.agent_speeds = [1, 2, 0.5]  # Agent2 2x lebih cepat; Agent3 2x lebih lambat
         self.base_processing_times = [6, 4, 2]  # Contoh waktu dasar untuk tiap agen
         self.agent_status_location_all=[4,5,6]
@@ -95,7 +96,7 @@ class FJSPEnv(gym.Env):
     def update_state(self, observation_all,  actions_all):
         next_observation_all=[]
         for i, agent in enumerate(self.agents):
-            print("\nAgent-", i, end=": ")
+            print("\nAgent-", i+1, end=": ")
             observation=observation_all[i]
             yr = agent.position
             status_location=self.agent_status_location_all[i]
@@ -111,11 +112,11 @@ class FJSPEnv(gym.Env):
                 ACCEPT
                 A. saat job sudah di workbench
                     1. cek:
-                        a. apakah operation ke-1 atau ke-2 di workbench sesuai dengan operation capability agent
+                        a. apakah urutan operation di workbench sesuai dengan operation capability agent
                     2. state:
                         a. state status agent berubah dari accept menjadi working
                         b. state operation berubah dari 0 menjadi operation ke-1 atau ke-2 atau ke-3
-                        c. state remaining operation bergser sesuai window size
+                        c. state remaining operation bergeser sesuai window size
                     
 
                 B. saat job masih diconveyor yr
@@ -127,23 +128,30 @@ class FJSPEnv(gym.Env):
                     3. conveyor pada yr akan kosong 
                     4. State:
                         a. state status agent berubah dari idle menjadi accept
-                        b. state remaining operation bergser sesuai window size
+                        b. state remaining operation bergeser sesuai window size
                     5. jika syarat tidak terpenuhi, maka tidak ada perubahan dari timestep sebelumnya
                 '''
-                if agent.workbench is not None and observation[status_location]==1:
+                if agent.workbench and observation[status_location]==1:
+                    print("masuk sini")
                     observation[status_location]=2 # accept menjadi working
-                    #observation[3]=agent.current_job
-
-                    pass
-
-                elif agent.workbench is False:
+                    list_operation=list(agent.workbench.values())[0] # karena [[1,2.3]] jadi [1,2,3]
+                    print("list_operation: ", list_operation)
+                    # diambil operation job pertama karena sudah diurutkan dari 1 hingga 3
+                    if list_operation[0] in agent.operation_capability:
+                        first_operation=agent.operation_capability[0]
+                        second_operation=agent.operation_capability[1]
+                        a=np.where(list_operation[0]==first_operation, first_operation, second_operation)
+                        print("a: ", a)
+                        pass
+            
+                elif not agent.workbench:
                     req_ops = self.conveyor.job_details.get(self.conveyor.conveyor[yr], [])
 
                     if self.conveyor.conveyor[yr] is not None and  req_ops[0] in agent.operation_capability and observation[status_location]==0:
                         print("ACCEPT")
                         print("req_ops: ", req_ops)
                         observation[status_location]=1 # idle menjadi accept
-                        agent.workbench=self.conveyor.conveyor[yr]
+                        agent.workbench["%s"%self.conveyor.conveyor[yr]]=req_ops
                         self.conveyor.conveyor[yr] = None
                         # dummy= agent.process(self.conveyor.job_details)
                         # print("agent process on workbench: ", dummy)
@@ -179,14 +187,12 @@ class FJSPEnv(gym.Env):
 
                 
             self.agents[i]=agent
-
             next_observation_all.append(observation)
+            #--------------------------------------------------------------------------------------------
                     
         
-        
-        
-        
         next_observation_all=np.array(next_observation_all)
+        # update  state Syr,t, yakni operasi yang tersisa pada job di conveyor sesuai window size
         self.conveyor.move_conveyor()
         self.conveyor.generate_jobs()
         for i, agent in enumerate(self.agents):
@@ -213,13 +219,8 @@ class FJSPEnv(gym.Env):
           3: CONTINUE default jika sedang memproses/tidak ada job
         """
         self.step_count += 1
-        #print("self.observation_all: ", self.observation_all)
         next_observation_all= self.update_state(observation_all=self.observation_all, actions_all=actions)
         self.observation_all=next_observation_all
-        
-      
-        
-        
         print()
         # Contoh reward: negatif dari panjang buffer.
         reward = -len(self.conveyor.buffer_jobs)
@@ -233,12 +234,11 @@ class FJSPEnv(gym.Env):
        # print(f"Time Step: {self.step_count}")
         self.conveyor.display()
         for a, agent in enumerate(self.agents):
-            #status = agent.current_job if agent.current_job is not None else "Idle"
             print(f"Status Agent {agent.id} at position {agent.position}: {int(self.observation_all[a][self.agent_status_location_all[a]]) }")
         #print("-" * 50)
 
 if __name__ == "__main__":
-    env = FJSPEnv(window_size=3, num_agents=3, max_steps=100)
+    env = FJSPEnv(window_size=3, num_agents=3, max_steps=50)
     state, info = env.reset(seed=42)
     #nv.render()
     total_reward = 0

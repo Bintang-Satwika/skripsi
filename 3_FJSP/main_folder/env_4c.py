@@ -99,7 +99,7 @@ class FJSPEnv(gym.Env):
         for i, agent in enumerate(self.agents):
             print("\nAgent-", i+1, end=": ")
             observation=observation_all[i]
-            yr = agent.position
+            yr = int(observation[0])
             status_location=self.agent_status_location_all[i]
 
             window_sections = [yr - r for r in range(self.window_size)]
@@ -238,7 +238,7 @@ class FJSPEnv(gym.Env):
         self.conveyor.generate_jobs()
 
         for i, agent in enumerate(self.agents):
-            yr = agent.position
+            yr = int(observation_all[i][0])
             window_sections = [yr - r for r in range(self.window_size)]
             # window_agent_product=np.array(self.conveyor.conveyor)[window_sections]
             job_details_value= [(self.conveyor.job_details.get(self.conveyor.conveyor[job_window], [])) for job_window in window_sections]
@@ -248,8 +248,7 @@ class FJSPEnv(gym.Env):
                 print(j, value)
                 next_observation_all[i, -3 + j] = len(value)
 
-        # for idx, agent in enumerate(self.agents):
-        #     print(f"Agent-{idx} workbench: {agent.workbench}")
+
         return next_observation_all
 
 
@@ -274,7 +273,7 @@ class FJSPEnv(gym.Env):
         # print("reward_working_all: ", reward_working_all)
         # print("reward_agent_all: ", reward_agent_all)
         done_step = self.step_count >= self.max_steps
-        truncated_step = True if self.conveyor.product_completed>= self.n_jobs else False
+        truncated_step = True if len(self.conveyor.product_completed)>= self.n_jobs else False
         self.observation_all=next_observation_all
         info_step = {"actions": actions}
         print("next_observation_all: ", next_observation_all)
@@ -307,7 +306,7 @@ class FJSPEnv(gym.Env):
        # print(f"Time Step: {self.step_count}")
         self.conveyor.display()
         for a, agent in enumerate(self.agents):
-            print(f"Status Agent {agent.id} at position {agent.position}: {int(self.observation_all[a][self.agent_status_location_all[a]]) }")
+            print(f"Status Agent {agent.id} at position {self.observation_all[a][0]}: {int(self.observation_all[a][self.agent_status_location_all[a]]) }")
         #print("-" * 50)
 
 if __name__ == "__main__":

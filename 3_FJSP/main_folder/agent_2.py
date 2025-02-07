@@ -1,6 +1,5 @@
 import numpy as np
 import random
-import math
 # ============================================================================
 # Agent: Merepresentasikan robot dengan workbench
 # ============================================================================
@@ -18,7 +17,7 @@ class Agent:
         self.speed = speed
         #self.current_job = None
         self.processing_time_remaining = 0
-        self.pending_reinsertion = False
+        # self.pending_reinsertion = False
 
         # baru
         self.workbench = {}
@@ -39,11 +38,11 @@ class Agent:
 
 
     def processing_time(self, base_processing_time):
-        return np.ceil(base_processing_time / self.speed)
+        return int(np.ceil(base_processing_time / self.speed))
 
-    def start_job(self):
-        self.processing_time_remaining = math.ceil(self.base_processing_time / self.speed)
-        self.status = 1  # Mulai memproses
+    # def start_job(self):
+    #     self.processing_time_remaining = math.ceil(self.base_processing_time / self.speed)
+        #self.status = 1  # Mulai memproses
 
     # def process(self, job_details):
     #     """

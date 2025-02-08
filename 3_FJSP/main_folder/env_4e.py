@@ -150,10 +150,11 @@ class FJSPEnv(gym.Env):
                 '''
                 #print("self.is_job_moving_to_workbench: ", self.is_job_moving_to_workbench)
                 #print("observation[status_location]: ", observation[status_location])
-                if self.is_job_moving_to_workbench[i] and observation[status_location]==1:
+                if self.is_job_moving_to_workbench[i] and observation[status_location]==1 and not agent.workbench:
                     print("ACCEPT sudah di workbench")
                     self.is_job_moving_to_workbench[i]=False
                     agent.workbench=agent.buffer_job_to_workbench
+                    agent.buffer_job_to_workbench={}
                     #print("agent.workbench: ", agent.workbench)
 
                     observation[status_location]=2 # accept menjadi working
@@ -200,8 +201,10 @@ class FJSPEnv(gym.Env):
                     # req_ops=self.conveyor.job_details.get(product_name, [])
                     print("WAIT yr-1")
                     self.is_action_wait_succeed[i]=True
+                    pass
                 else:
                     print("FAILED ACTION: agent status is not idle")
+                    pass
 
             elif actions[i] == 2:
                 if observation[status_location]==0:
@@ -217,11 +220,14 @@ class FJSPEnv(gym.Env):
                     # req_ops=self.conveyor.job_details.get(product_name, [])
                     print("WAIT yr-2")
                     self.is_action_wait_succeed[i]=True
+                    pass
                 else:
                     print("FAILED ACTION: agent status is not idle")
+                    pass
 
             elif actions[i] == 3:
                 print("DECLINE")
+                pass
 
             elif actions[i] == 4:
                 '''
@@ -257,6 +263,7 @@ class FJSPEnv(gym.Env):
 
                 elif observation[status_location]==1: 
                     print("CONTINUE in idle")
+                    pass
         
             '''
             RETURN TO CONVEYOR
@@ -411,7 +418,7 @@ class FJSPEnv(gym.Env):
         #print("-" * 50)
 
 if __name__ == "__main__":
-    env = FJSPEnv(window_size=3, num_agents=3, max_steps=60)
+    env = FJSPEnv(window_size=3, num_agents=3, max_steps=1000)
     state, info = env.reset(seed=42)
     #nv.render()
     total_reward = 0

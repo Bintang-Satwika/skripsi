@@ -279,9 +279,10 @@ class FJSPEnv(gym.Env):
                         self.conveyor.conveyor[yr]=str(list(agent.workbench)[0])
                         print("self.conveyor.conveyor: ", self.conveyor.conveyor)
                         self.product_return_to_conveyor[i]= False
-                        # mengosongkan workbench dan agent menjadi idle
+                        # mengosongkan workbench -> agent menjadi idle -> tidak ada operasi pada robot
                         agent.workbench={}
                         observation[status_location]=0
+                        observation[1+self.agent_many_operations]=0
                     else:
                         print("CAN'T RETURN: conveyor yr is not empty")
             

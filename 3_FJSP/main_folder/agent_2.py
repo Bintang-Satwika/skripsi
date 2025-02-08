@@ -22,6 +22,7 @@ class Agent:
         # baru
         self.workbench = {}
         self.window_product=[None]*window_size
+        self.buffer_job_to_workbench ={}
 
     def build_state(self):
         """

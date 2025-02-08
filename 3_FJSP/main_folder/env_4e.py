@@ -63,7 +63,7 @@ class FJSPEnv(gym.Env):
         # ---------------------------------------------------------------------
         # A0 = ACCEPT, A1..A(w-1) = WAIT ,
         # Ad = DECLINE, Ac = CONTINUE
-        # Sehingga total 4 aksi: 0=ACCEPT, 1=WAIT, 2=DECLINE, 3=CONTINUE
+        # Sehingga total 5 aksi: 0=ACCEPT, 1=WAIT yr-1. 2=WAit yr-2, 3=DECLINE, 4=CONTINUE
         # ---------------------------------------------------------------------
         self.action_space =  spaces.MultiDiscrete([3+self.window_size-1] * self.num_agents)  
         self.state_dim = self.observation_space.shape
@@ -246,9 +246,11 @@ class FJSPEnv(gym.Env):
                     if agent.processing_time_remaining > 0:
                         agent.processing_time_remaining -= 1
                     elif agent.processing_time_remaining == 0:
-                        observation[status_location]==3 # working menjadi completing
+                        observation[status_location]= 3 # working menjadi completing
                         self.is_status_working_succeed[i]=False # operasi selesai dan agent tidak bekerja
                         print("processing_time_remaining is 0")
+                        print("observation[status_location]: ", observation[status_location])
+
                     else:
                         print("FAILED ACTION: agent.processing_time_remaining")
 
@@ -260,13 +262,14 @@ class FJSPEnv(gym.Env):
             1. cek :
                 a. apakah terdapat operasi yang belum selesai pada product di workbench
                 b. apakah conveyor pada yr kosong
+                c. apakah action yang dipilih 4 (continue)
             2. jika ya, maka product akan dikembalikan ke conveyor
             3. jika tidak, maka status agent tetap continue dan menunggu conveyor yr kosong agar product dapat dikembalikan ke conveyor
             4. Agent akan menjadi idle dan workbench akan dikosongkan
             '''
             # mengembalikan product ke conveyor jika operasi belum selesai dan product masih ada operasi selanjutnya
             # (kodingan harus ditaruh sebelum self.product_return_to_conveyor[i] menjadi True)
-            if self.product_return_to_conveyor[i] and agent.workbench:
+            if self.product_return_to_conveyor[i] and agent.workbench and actions[i]==4:
                     # jika conveyor pada yr kosong, maka product akan dikembalikan ke conveyor
                     if self.conveyor.conveyor[yr] is None:
                         # mengembalikan product ke conveyor
@@ -278,19 +281,29 @@ class FJSPEnv(gym.Env):
                     else:
                         print("CAN'T RETURN: conveyor yr is not empty")
             
-            if observation[status_location]==3:
+            if observation[status_location]==3 and actions[i]==4:
+                print("COMPLETING masuk sini")
                 self.total_process_done+=1 # menambahkan total process yang sudah selesai
                 for key, vektor in agent.workbench.items():
                     # mengurangi operation yang sudah selesai
-                    if len(vektor)>0:
+                    if len(vektor)>1:
                         agent.workbench[key].pop(0)
                     else:
                         # menghapus product yang sudah selesai dan mengosongkan workbench
                         self.conveyor.product_completed.append(key)
                         agent.workbench={} 
+                        print("agent.workbench: ", agent.workbench)
                     # mengembalikan ke conveyor jika operasi product belum selesai
                     if agent.workbench:
                         self.product_return_to_conveyor[i]=True
+                        
+                    # mengupdate job_details
+                    try:
+                        self.conveyor.job_details[key]= agent.workbench[key]
+                    except:
+                        self.conveyor.job_details.pop(key)
+                
+                    print("self.conveyor.job_details: ", self.conveyor.job_details)
 
                 # menyimpan job ke buffer untuk iterasi selanjutnya agar dapat dipindahkan ke conveyor
                 #agent.buffer_job_to_conveyor=agent.workbench
@@ -382,15 +395,15 @@ class FJSPEnv(gym.Env):
        # print(f"Time Step: {self.step_count}")
         print("\nNEXT STATE RENDER:")
         for a, agent in enumerate(self.agents):
-            print("self.conveyor.job_details:, ", self.conveyor.job_details)
+            #print("self.conveyor.job_details:, ", self.conveyor.job_details)
             print(f"Status Agent {agent.id} at position {int(self.observation_all[a][0])}: {int(self.observation_all[a][self.agent_status_location_all[a]]) }")
-            print("window product: ", agent.window_product, "\nworkbench: ", agent.workbench)
+            #print("window product: ", agent.window_product, "\nworkbench: ", agent.workbench)
             print()
         self.conveyor.display()
         #print("-" * 50)
 
 if __name__ == "__main__":
-    env = FJSPEnv(window_size=3, num_agents=3, max_steps=20)
+    env = FJSPEnv(window_size=3, num_agents=3, max_steps=50)
     state, info = env.reset(seed=42)
     #nv.render()
     total_reward = 0
@@ -401,9 +414,9 @@ if __name__ == "__main__":
         print("\nStep:", env.step_count)
         # Untuk contoh, gunakan aksi acak
         actions = env.action_space.sample()
-        actions=[0]*3
+        #actions=[0]*3
         #print("state: ", state)
-        #print("Actions:", actions)
+        print("Actions:", actions)
         next_state, reward, done, truncated, info = env.step(actions)
         #print("Reward:", reward)
         print("NEXT STATE:", next_state)

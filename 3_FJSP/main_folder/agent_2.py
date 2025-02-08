@@ -23,6 +23,7 @@ class Agent:
         self.workbench = {}
         self.window_product=[None]*window_size
         self.buffer_job_to_workbench ={}
+        self.buffer_job_to_conveyor = {}
 
     def build_state(self):
         """

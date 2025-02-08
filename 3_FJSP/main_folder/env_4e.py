@@ -43,7 +43,7 @@ class FJSPEnv(gym.Env):
         self.agent_operation_capability = [[1,2], [2,3], [1,3]]
         self.agent_many_operations= 2
         self.agent_speeds = [1, 2, 3]  # Agent2 2x lebih cepat; Agent3 3x lebih cepat
-        self.base_processing_times = [15, 10, 6]  #  waktu dasar untuk setiap operasi
+        self.base_processing_times = [6, 10, 15]  #  waktu dasar untuk setiap operasi
         self.agent_status_location_all=[4,5,6]
         self.agents = []
         for i in range(self.num_agents):
@@ -127,7 +127,7 @@ class FJSPEnv(gym.Env):
                 A. saat job sudah di workbench
                     1. cek:
                         a. apakah  status agent sudah accept
-                        b. apakah job sedang dipindahkan ke workbench1
+                        b. apakah job sedang dipindahkan ke workbench
                     2. jika ya, maka job sudah ada di workbench dan agent akan memproses job tersebut
                     3. state:
                         a. state status agent berubah dari accept menjadi working
@@ -160,8 +160,8 @@ class FJSPEnv(gym.Env):
                     #print("list_operation: ", list_operation)
                     # diambil operation job pertama karena sudah diurutkan dari 1 hingga 3
                     if list_operation[0] in capability_operation:
+                        # state operation berubah dari 0 menjadi operation ke-1 atau ke-2 atau ke-3
                         select_operation=int(np.where(list_operation[0]==first_operation, first_operation, second_operation))
-                        #print("select_operation: ", select_operation )
                         observation[1+self.agent_many_operations]=select_operation
                         
                         agent.processing_time_remaining = agent.processing_time(self.base_processing_times[select_operation-1])
@@ -223,6 +223,21 @@ class FJSPEnv(gym.Env):
                 print("DECLINE")
 
             elif actions[i] == 4:
+                '''
+                CONTINUE
+                A. saat agent sedang bekerja di workbench
+                1. cek apakah status agent saat ini adalah working pada workbench
+                2. jika ya, maka waktu process akan berkurang 1 iterasi
+                3. jika waktu process sudah 0, maka status agent akan berubah dari working menjadi completing
+                4. State:
+                    a. state status agent berubah dari working menjadi completing
+                    b. state operation berubah  menjadi 0
+                    c. state remaining operation bergeser sesuai window size
+
+                B. saat agent idle
+                1. cek apakah status agent saat ini adalah idle
+                2. jika ya, maka tidak ada perubahan dari timestep sebelumnya dan action wait akan diberikan pada conveyor yang sama.
+                '''
 
                 if observation[status_location]==2 and observation[1+self.agent_many_operations] !=0 and agent.workbench: # sekarang lagi working di workbench
                     print("CONTINUE in working")
@@ -240,15 +255,28 @@ class FJSPEnv(gym.Env):
                 elif observation[status_location]==1: 
                     print("CONTINUE in idle")
         
-    
-            # mengembalikan product ke conveyor jika operasi belum selesai (kodingan harus ditaruh sebelum self.product_return_to_conveyor[i] menjadi True)
-            if self.product_return_to_conveyor[i]:
+            '''
+            RETURN TO CONVEYOR
+            1. cek :
+                a. apakah terdapat operasi yang belum selesai pada product di workbench
+                b. apakah conveyor pada yr kosong
+            2. jika ya, maka product akan dikembalikan ke conveyor
+            3. jika tidak, maka status agent tetap continue dan menunggu conveyor yr kosong agar product dapat dikembalikan ke conveyor
+            4. Agent akan menjadi idle dan workbench akan dikosongkan
+            '''
+            # mengembalikan product ke conveyor jika operasi belum selesai dan product masih ada operasi selanjutnya
+            # (kodingan harus ditaruh sebelum self.product_return_to_conveyor[i] menjadi True)
+            if self.product_return_to_conveyor[i] and agent.workbench:
+                    # jika conveyor pada yr kosong, maka product akan dikembalikan ke conveyor
                     if self.conveyor.conveyor[yr] is None:
-                        self.conveyor.conveyor[yr]=str(list(agent.workbench.keys())[0])
+                        # mengembalikan product ke conveyor
+                        self.conveyor.conveyor[yr]=str(list(agent.workbench)[0])
                         self.product_return_to_conveyor[i]= False
-                        next_observation_all[i, self.agent_status_location_all[i]]=0
+                        # mengosongkan workbench dan agent menjadi idle
+                        agent.workbench={}
+                        observation[status_location]=0
                     else:
-                        print("conveyor is not empty")
+                        print("CAN'T RETURN: conveyor yr is not empty")
             
             if observation[status_location]==3:
                 self.total_process_done+=1 # menambahkan total process yang sudah selesai
@@ -263,6 +291,9 @@ class FJSPEnv(gym.Env):
                     # mengembalikan ke conveyor jika operasi product belum selesai
                     if agent.workbench:
                         self.product_return_to_conveyor[i]=True
+
+                # menyimpan job ke buffer untuk iterasi selanjutnya agar dapat dipindahkan ke conveyor
+                #agent.buffer_job_to_conveyor=agent.workbench
                 
 
             self.agents[i]=agent
@@ -351,6 +382,7 @@ class FJSPEnv(gym.Env):
        # print(f"Time Step: {self.step_count}")
         print("\nNEXT STATE RENDER:")
         for a, agent in enumerate(self.agents):
+            print("self.conveyor.job_details:, ", self.conveyor.job_details)
             print(f"Status Agent {agent.id} at position {int(self.observation_all[a][0])}: {int(self.observation_all[a][self.agent_status_location_all[a]]) }")
             print("window product: ", agent.window_product, "\nworkbench: ", agent.workbench)
             print()

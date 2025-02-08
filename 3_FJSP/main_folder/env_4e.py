@@ -6,7 +6,8 @@ from gymnasium import spaces
 from circular_conveyor_2 import CircularConveyor
 from agent_2 import Agent
 '''
-Urutan update state-> move conveyor -> generate jobs -> update state Syrt
+1. Urutan update state-> move conveyor -> generate jobs -> update state Syrt
+2. sudah bisa mengembalikan barang dari workbench ke conveyor
 '''
 
 # ============================================================================
@@ -269,11 +270,14 @@ class FJSPEnv(gym.Env):
             '''
             # mengembalikan product ke conveyor jika operasi belum selesai dan product masih ada operasi selanjutnya
             # (kodingan harus ditaruh sebelum self.product_return_to_conveyor[i] menjadi True)
-            if self.product_return_to_conveyor[i] and agent.workbench and actions[i]==4:
+            if self.product_return_to_conveyor[i] and agent.workbench:
+                    print("halo semua")
                     # jika conveyor pada yr kosong, maka product akan dikembalikan ke conveyor
                     if self.conveyor.conveyor[yr] is None:
                         # mengembalikan product ke conveyor
+                        print("berhasil masuk sini")
                         self.conveyor.conveyor[yr]=str(list(agent.workbench)[0])
+                        print("self.conveyor.conveyor: ", self.conveyor.conveyor)
                         self.product_return_to_conveyor[i]= False
                         # mengosongkan workbench dan agent menjadi idle
                         agent.workbench={}
@@ -281,8 +285,9 @@ class FJSPEnv(gym.Env):
                     else:
                         print("CAN'T RETURN: conveyor yr is not empty")
             
-            if observation[status_location]==3 and actions[i]==4:
+            if observation[status_location]==3 and not self.product_return_to_conveyor[i]:
                 print("COMPLETING masuk sini")
+                print("agent.workbench before: ", agent.workbench)
                 self.total_process_done+=1 # menambahkan total process yang sudah selesai
                 for key, vektor in agent.workbench.items():
                     # mengurangi operation yang sudah selesai
@@ -292,7 +297,8 @@ class FJSPEnv(gym.Env):
                         # menghapus product yang sudah selesai dan mengosongkan workbench
                         self.conveyor.product_completed.append(key)
                         agent.workbench={} 
-                        print("agent.workbench: ", agent.workbench)
+                        #print("self.conveyor.job_details: ", self.conveyor.job_details)
+                        #print("agent.workbench after: ", agent.workbench)
                     # mengembalikan ke conveyor jika operasi product belum selesai
                     if agent.workbench:
                         self.product_return_to_conveyor[i]=True
@@ -303,7 +309,8 @@ class FJSPEnv(gym.Env):
                     except:
                         self.conveyor.job_details.pop(key)
                 
-                    print("self.conveyor.job_details: ", self.conveyor.job_details)
+                    #print("self.conveyor.job_details: ", self.conveyor.job_details)
+                print("agent.workbench after: ", agent.workbench)
 
                 # menyimpan job ke buffer untuk iterasi selanjutnya agar dapat dipindahkan ke conveyor
                 #agent.buffer_job_to_conveyor=agent.workbench
@@ -396,14 +403,14 @@ class FJSPEnv(gym.Env):
         print("\nNEXT STATE RENDER:")
         for a, agent in enumerate(self.agents):
             #print("self.conveyor.job_details:, ", self.conveyor.job_details)
-            print(f"Status Agent {agent.id} at position {int(self.observation_all[a][0])}: {int(self.observation_all[a][self.agent_status_location_all[a]]) }")
+            #print(f"Status Agent {agent.id} at position {int(self.observation_all[a][0])}: {int(self.observation_all[a][self.agent_status_location_all[a]]) }")
             #print("window product: ", agent.window_product, "\nworkbench: ", agent.workbench)
             print()
         self.conveyor.display()
         #print("-" * 50)
 
 if __name__ == "__main__":
-    env = FJSPEnv(window_size=3, num_agents=3, max_steps=50)
+    env = FJSPEnv(window_size=3, num_agents=3, max_steps=60)
     state, info = env.reset(seed=42)
     #nv.render()
     total_reward = 0

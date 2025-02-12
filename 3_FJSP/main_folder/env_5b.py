@@ -372,7 +372,9 @@ class FJSPEnv(gym.Env):
                     else:
                         # menghapus product yang sudah selesai dan mengosongkan workbench
                         self.conveyor.product_completed.append(key)
-                        agent.workbench={} 
+                        agent.workbench={}
+                        observation[status_location]=0
+                        observation[self.state_operation_now_location]=0
                         #print("self.conveyor.job_details: ", self.conveyor.job_details)
                         #print("agent.workbench after: ", agent.workbench)
                     # mengembalikan ke conveyor jika operasi product belum selesai
@@ -516,8 +518,8 @@ def FAA_action(states):
     return actions
 
 if __name__ == "__main__":
-    env = FJSPEnv(window_size=3, num_agents=3, max_steps=20)
-    state, info = env.reset(seed=42)
+    env = FJSPEnv(window_size=3, num_agents=3, max_steps=200)
+    state, info = env.reset(seed=3)
     #nv.render()
     total_reward = 0
     done = False

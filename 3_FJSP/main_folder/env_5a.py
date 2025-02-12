@@ -302,6 +302,7 @@ class FJSPEnv(gym.Env):
                     self.is_status_working_succeed[i]=True
                     if agent.processing_time_remaining > 0:
                         agent.processing_time_remaining -= 1
+                        print("agent.processing_time_remaining: ", agent.processing_time_remaining)
                     elif agent.processing_time_remaining == 0:
                         observation[status_location]= 3 # working menjadi completing
                         self.is_status_working_succeed[i]=False # operasi selesai dan agent tidak bekerja
@@ -475,7 +476,7 @@ def FAA_action(states):
         if state[env.state_status_location_all[i]]==1 and state[env.state_operation_now_location]==0: # agent accept dan operasi pekerjaan belum di assign
             actions.append(0)
         elif state[env.state_status_location_all[i]]==2 and state[env.state_operation_now_location]!=0: # agent working
-            actions.append(3)
+            actions.append(4)
 
         elif state[env.state_first_job_operation_location[0]]!=0: # ada job di yr
             actions.append(0)
@@ -484,11 +485,11 @@ def FAA_action(states):
         elif state[env.state_first_job_operation_location[2]]!=0: # ada job di yr-2
             actions.append(2)
         else:
-            actions.append(3) # continues
+            actions.append(4) # continues
     return actions
 
 if __name__ == "__main__":
-    env = FJSPEnv(window_size=3, num_agents=3, max_steps=15)
+    env = FJSPEnv(window_size=3, num_agents=3, max_steps=25)
     state, info = env.reset(seed=42)
     #nv.render()
     total_reward = 0

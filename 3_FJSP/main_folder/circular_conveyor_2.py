@@ -18,7 +18,7 @@ class CircularConveyor:
         self.product_operations = {
             "A": [1,2,3],
             "B": [2,3],
-            "C": [1,3]
+            "C": [3]
         }
         self.job_details = {}  # For each job, stores its remaining operations.
         self.product_completed = []  # Buffer for finished products.

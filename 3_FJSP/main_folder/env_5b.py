@@ -60,18 +60,9 @@ class FJSPEnv(gym.Env):
         self.base_processing_times = [6, 10, 15]  #  waktu dasar untuk setiap operasi
         
         self.agents = []
-        # for i in range(self.num_agents):
-        #     agent = Agent(
-        #         agent_id=i+1,
-        #         position=self.agent_positions[i],
-        #         operation_capability=self.agent_operation_capability[i],
-        #         speed=self.agent_speeds[i],
-        #         window_size=self.window_size,
-        #         num_agent=self.num_agents
-        #     )
-        #     self.agents.append(agent)
 
-        # Ruang observasi: tiap agen memiliki state vektor berukuran 1+2+1+3+3 = 10
+
+        # Ruang observasi: tiap agen memiliki state vektor berukuran 14
         # 1. posisi conveyor (integer)
         # 2. operasi yang bisa dilakukan oleh agent  (list [o1,o2])
         # 3. operasi sekarang yang sedang dikerjakan oleh agent (integer)
@@ -121,17 +112,196 @@ class FJSPEnv(gym.Env):
             )
             self.agents.append(agent)
         return self.initial_state(), {}
+
     
-    def action_accept(self, observation, agent):
-        pass
+    def action_accept(self, observation, agent, i, status_location):
+        '''
+        ACCEPT
+        A. saat job sudah di workbench
+            1. cek syarat:
+                a. apakah  status agent sudah accept
+                b. apakah job sedang dipindahkan ke workbench
+            2. jika ya, maka job sudah ada di workbench dan agent akan memproses job tersebut
+            3. state:
+                a. state status agent berubah dari accept menjadi working
+                b. state operation berubah dari 0 menjadi operation ke-1 atau ke-2 atau ke-3
+                c. state remaining operation bergeser sesuai window size
+            4. jika syarat tidak terpenuhi, maka job masih diconveyor yr 
+            
+        B. saat job masih diconveyor yr
+            1. cek:
+                a.apakah job di conveyor di posisi agent saat ini (yr) ada atau tidak
+                b. apakah job tersebut sesuai dengan operation capability agent
+                c. apakah status agent saat ini adalah idle
+            2. jika ya, maka agent mengambil job tersebut dan memindahkan ke buffer "is_job_moving_to_workbench"
+            3. conveyor pada yr akan kosong 
+            4. State:
+                a. state status agent berubah dari idle menjadi accept
+                b. state remaining operation bergeser sesuai window size
+                c. state operation sekarang harus 0 (nol)
+            5. jika syarat tidak terpenuhi, maka tidak ada perubahan dari timestep sebelumnya
+        '''
+        if observation[self.state_operation_now_location]==0  and not agent.workbench:
+
+            if  observation[status_location]==1 and self.is_job_moving_to_workbench[i] :
+                print("ACCEPT sudah di workbench")
+                self.is_job_moving_to_workbench[i]=False
+                agent.workbench=agent.buffer_job_to_workbench
+                agent.buffer_job_to_workbench={}
+
+                observation[status_location]=2 # accept menjadi working
+
+                list_operation=list(agent.workbench.values())[0] # karena [[1,2.3]] jadi [1,2,3]
+                print("list_operation: ", list_operation)
+
+                # diambil operation job pertama karena sudah diurutkan dari 1 hingga 3
+                if list_operation[0] in observation[self.state_operation_capability_location]:
+                    select_operation=int(np.where(list_operation[0]==observation[self.state_operation_capability_location][0], 
+                                                    observation[self.state_operation_capability_location][0], 
+                                                    observation[self.state_operation_capability_location][1])
+                                                )
+                    #  state operation berubah dari 0 menjadi operation ke-1 atau ke-2 atau ke-3
+                    observation[self.state_operation_now_location] =select_operation
+                    # state first job operation akan menjadi nol pada yr karena job dipindah ke workbench
+                    observation[self.state_first_job_operation_location[0]]=0
+                    # state second job operation akan menjadi nol pada yr karena job  dipindah ke workbench
+                    observation[self.state_second_job_operation_location[0]]=0
+
+                    # processing time agent akan mulai dihitung
+                    agent.processing_time_remaining = agent.processing_time(self.base_processing_times[select_operation-1])
+                    print("agent.processing_time_remaining: ", agent.processing_time_remaining)
+                else:
+                    print("FAILED ACTION: operation capability is False")
+        
+            elif observation[status_location]==0  and observation[self.state_pick_job_window_location]== 1 and not self.is_job_moving_to_workbench[i] :
+                if  observation[self.state_first_job_operation_location[0]] in  observation[self.state_operation_capability_location]:
+                    print("ACCEPT di conveyor yr")
+                    # idle menjadi accept
+                    observation[status_location]=1 
+                    # job akan dipindahkan ke workbench
+                    self.is_job_moving_to_workbench[i]=True
+                    # menyimpan job conveyor yr di buffer untuk dipindahkan ke workbench pada timestep selanjutnya
+                    agent.buffer_job_to_workbench["%s"%agent.window_product[0]]=  self.conveyor.job_details.get(agent.window_product[0], [])
+                    # conveyor pada yr  akan kosong
+                    self.is_job_conveyor_yr_remove=True
+                    self.conveyor.conveyor[int(observation[self.state_yr_location])] = None
+                    print("self.conveyor.conveyor: ", self.conveyor.conveyor)
+                else:
+                    print("FAILED ACTION: observation first job operation is not in operation capability")
+            else:
+                print("FAILED ACTION: agent status is not idle or job is not in conveyor")
+
+        else:
+            print("FAILED ACTION: workbench is not Empty.")
+        
+        return observation, agent
     
+
+    def action_wait(self, observation, agent, i, status_location, actions):
+        if observation[status_location]==0:
+            
+            if observation[self.state_first_job_operation_location[1]] !=0 and actions[i]==1:
+                '''
+                WAIT
+                1. cek apakah status agent saat ini adalah idle
+                2. jika ya, maka agent memberikan action wait untuk job pada yr-1
+                3. state remaining operation bergeser sesuai window size
+                4. jika tidak, maka tidak ada perubahan dari timestep sebelumnya
+                5. untuk menghitung reward, maka agent akan mendapatkan reward jika berhasil menunggu
+                '''
+                # product_name=self.conveyor.conveyor[yr-1]
+                # req_ops=self.conveyor.job_details.get(product_name, [])
+                print("WAIT yr-1")
+                observation[self.state_pick_job_window_location]=1
+                self.is_action_wait_succeed[i]=True
+                pass
+            else:
+                print("FAILED ACTION: there is no any job in conveyor yr-1")
+                pass
+
+            if observation[self.state_first_job_operation_location[2]] !=0 and actions[i]==2:
+                '''
+                WAIT
+                1. cek apakah status agent saat ini adalah idle
+                2. jika ya, maka agent memberikan action wait untuk job pada yr-2
+                3. state remaining operation bergeser sesuai window size
+                4. jika tidak, maka tidak ada perubahan dari timestep sebelumnya
+                5. untuk menghitung reward, maka agent akan mendapatkan reward jika berhasil menunggu
+                '''
+                # product_name=self.conveyor.conveyor[yr-2]
+                # req_ops=self.conveyor.job_details.get(product_name, [])
+                print("WAIT yr-2")
+                observation[self.state_pick_job_window_location]=2
+                self.is_action_wait_succeed[i]=True
+                pass
+            else:
+                print("FAILED ACTION: there is no any job in conveyor yr-2")
+                pass
+        else:
+            print("FAILED ACTION: agent status is not idle")
+
+        return observation, agent
+    
+
+    def action_decline(self, observation, agent, i, status_location):
+        '''
+        DECLINE
+        1. cek apakah status agent saat ini adalah idle
+        2. jika ya, maka agent akan menolak job pada yr
+        '''
+        print("DECLINE")
+        observation[self.state_pick_job_window_location]=0
+        
+        return observation, agent
+    
+
+    def action_continue(self, observation, agent, i, status_location):
+        '''
+        CONTINUE
+        A. saat agent sedang bekerja di workbench
+        1. cek apakah status agent saat ini adalah working pada workbench
+        2. jika ya, maka waktu process akan berkurang 1 iterasi
+        3. jika waktu process sudah 0, maka status agent akan berubah dari working menjadi completing
+        4. State:
+            a. state status agent berubah dari working menjadi completing
+            b. state operation berubah  menjadi 0
+            c. state remaining operation bergeser sesuai window size
+
+        B. saat agent idle
+        1. cek apakah status agent saat ini adalah idle
+        2. jika ya, maka tidak ada perubahan dari timestep sebelumnya dan action wait akan diberikan pada conveyor yang sama.
+        '''
+
+        if observation[status_location]==2 and observation[1+self.agent_many_operations] !=0 and agent.workbench: # sekarang lagi working di workbench
+            print("CONTINUE in working")
+            # agent sedang bekerja
+            self.is_status_working_succeed[i]=True
+            if agent.processing_time_remaining > 0:
+                agent.processing_time_remaining -= 1
+                print("agent.processing_time_remaining: ", agent.processing_time_remaining)
+            elif agent.processing_time_remaining == 0:
+                observation[status_location]= 3 # working menjadi completing
+                self.is_status_working_succeed[i]=False # operasi selesai dan agent tidak bekerja
+                print("processing_time_remaining is 0")
+                print("observation[status_location]: ", observation[status_location])
+
+            else:
+                print("FAILED ACTION: agent.processing_time_remaining")
+
+        elif observation[status_location]==1: 
+            print("CONTINUE in idle")
+            pass
+
+        return observation, agent
+
+
+
+
 
     def update_state(self, observation_all,  actions_all):
         next_observation_all=observation_all
         # next_observation_all=np.array(next_observation_all)
 
-        
-                
         for i, agent in enumerate(self.agents):
             print("\nAgent-", i+1, end=": ")
             #print("window product: ", agent.window_product, "\nworkbench: ", agent.workbench)
@@ -140,7 +310,7 @@ class FJSPEnv(gym.Env):
             #print("int(observation[self.state_yr_location])", int(observation[self.state_yr_location]))
 
             window_sections = [int(observation[self.state_yr_location]) - r for r in range(self.window_size)]
-            print("window_sections: ", window_sections)
+            #print("window_sections: ", window_sections)
             agent.window_product=np.array(self.conveyor.conveyor)[window_sections]
 
 
@@ -150,174 +320,18 @@ class FJSPEnv(gym.Env):
             self.is_status_working_succeed[i]=False
             
 
-            if actions[i] == 0:
-                '''
-                ACCEPT
-                A. saat job sudah di workbench
-                    1. cek syarat:
-                        a. apakah  status agent sudah accept
-                        b. apakah job sedang dipindahkan ke workbench
-                    2. jika ya, maka job sudah ada di workbench dan agent akan memproses job tersebut
-                    3. state:
-                        a. state status agent berubah dari accept menjadi working
-                        b. state operation berubah dari 0 menjadi operation ke-1 atau ke-2 atau ke-3
-                        c. state remaining operation bergeser sesuai window size
-                    4. jika syarat tidak terpenuhi, maka job masih diconveyor yr 
-                    
-                B. saat job masih diconveyor yr
-                    1. cek:
-                        a.apakah job di conveyor di posisi agent saat ini (yr) ada atau tidak
-                        b. apakah job tersebut sesuai dengan operation capability agent
-                        c. apakah status agent saat ini adalah idle
-                    2. jika ya, maka agent mengambil job tersebut dan memindahkan ke buffer "is_job_moving_to_workbench"
-                    3. conveyor pada yr akan kosong 
-                    4. State:
-                        a. state status agent berubah dari idle menjadi accept
-                        b. state remaining operation bergeser sesuai window size
-                        c. state operation sekarang harus 0 (nol)
-                    5. jika syarat tidak terpenuhi, maka tidak ada perubahan dari timestep sebelumnya
-                '''
-                if observation[self.state_operation_now_location]==0  and not agent.workbench:
+            if actions[i] == 0: # ACCEPT
+                observation, agent  = self.action_accept(observation, agent, i, status_location)
+            
+            elif actions[i] == 1 or actions[i] == 2: # WAIT
+                observation, agent  = self.action_wait(observation, agent, i, status_location, actions)
 
-                    if  observation[status_location]==1 and self.is_job_moving_to_workbench[i] :
-                        print("ACCEPT sudah di workbench")
-                        self.is_job_moving_to_workbench[i]=False
-                        agent.workbench=agent.buffer_job_to_workbench
-                        agent.buffer_job_to_workbench={}
+            elif actions[i] == 3: # DECLINE
+                observation, agent  = self.action_decline(observation, agent, i, status_location)
 
-                        observation[status_location]=2 # accept menjadi working
-
-                        list_operation=list(agent.workbench.values())[0] # karena [[1,2.3]] jadi [1,2,3]
-                        print("list_operation: ", list_operation)
-
-                        # diambil operation job pertama karena sudah diurutkan dari 1 hingga 3
-                        if list_operation[0] in observation[self.state_operation_capability_location]:
-                            select_operation=int(np.where(list_operation[0]==observation[self.state_operation_capability_location][0], 
-                                                         observation[self.state_operation_capability_location][0], 
-                                                         observation[self.state_operation_capability_location][1])
-                                                        )
-                            #  state operation berubah dari 0 menjadi operation ke-1 atau ke-2 atau ke-3
-                            observation[self.state_operation_now_location] =select_operation
-                            # state first job operation akan menjadi nol pada yr karena job dipindah ke workbench
-                            observation[self.state_first_job_operation_location[0]]=0
-                            # state second job operation akan menjadi nol pada yr karena job  dipindah ke workbench
-                            observation[self.state_second_job_operation_location[0]]=0
-
-                            # processing time agent akan mulai dihitung
-                            agent.processing_time_remaining = agent.processing_time(self.base_processing_times[select_operation-1])
-                            print("agent.processing_time_remaining: ", agent.processing_time_remaining)
-                        else:
-                            print("FAILED ACTION: operation capability is False")
-                
-                    elif observation[status_location]==0  and observation[self.state_pick_job_window_location]== 1 and not self.is_job_moving_to_workbench[i] :
-                        if  observation[self.state_first_job_operation_location[0]] in  observation[self.state_operation_capability_location]:
-                            print("ACCEPT di conveyor yr")
-                            # idle menjadi accept
-                            observation[status_location]=1 
-                            # job akan dipindahkan ke workbench
-                            self.is_job_moving_to_workbench[i]=True
-                            # menyimpan job conveyor yr di buffer untuk dipindahkan ke workbench pada timestep selanjutnya
-                            agent.buffer_job_to_workbench["%s"%agent.window_product[0]]=  self.conveyor.job_details.get(agent.window_product[0], [])
-                            # conveyor pada yr  akan kosong
-                            self.is_job_conveyor_yr_remove=True
-                            self.conveyor.conveyor[int(observation[self.state_yr_location])] = None
-                            print("self.conveyor.conveyor: ", self.conveyor.conveyor)
-                        else:
-                            print("FAILED ACTION: observation first job operation is not in operation capability")
-                    else:
-                        print("FAILED ACTION: agent status is not idle or job is not in conveyor")
-
-                else:
-                    print("FAILED ACTION: workbench is not Empty.")
-
-
-            elif actions[i] == 1:
-                if observation[status_location]==0:
-                    if observation[self.state_first_job_operation_location[1]] !=0:
-                        '''
-                        WAIT
-                        1. cek apakah status agent saat ini adalah idle
-                        2. jika ya, maka agent memberikan action wait untuk job pada yr-1
-                        3. state remaining operation bergeser sesuai window size
-                        4. jika tidak, maka tidak ada perubahan dari timestep sebelumnya
-                        5. untuk menghitung reward, maka agent akan mendapatkan reward jika berhasil menunggu
-                        '''
-                        # product_name=self.conveyor.conveyor[yr-1]
-                        # req_ops=self.conveyor.job_details.get(product_name, [])
-                        print("WAIT yr-1")
-                        observation[self.state_pick_job_window_location]=1
-                        self.is_action_wait_succeed[i]=True
-                        pass
-                    else:
-                        print("FAILED ACTION: there is no any job in conveyor yr-1")
-                        pass
-                else:
-                    print("FAILED ACTION: agent status is not idle")
-
-            elif actions[i] == 2:
-                if observation[status_location]==0:
-                    if observation[self.state_first_job_operation_location[2]] !=0:
-                        '''
-                        WAIT
-                        1. cek apakah status agent saat ini adalah idle
-                        2. jika ya, maka agent memberikan action wait untuk job pada yr-2
-                        3. state remaining operation bergeser sesuai window size
-                        4. jika tidak, maka tidak ada perubahan dari timestep sebelumnya
-                        5. untuk menghitung reward, maka agent akan mendapatkan reward jika berhasil menunggu
-                        '''
-                        # product_name=self.conveyor.conveyor[yr-2]
-                        # req_ops=self.conveyor.job_details.get(product_name, [])
-                        print("WAIT yr-2")
-                        observation[self.state_pick_job_window_location]=2
-                        self.is_action_wait_succeed[i]=True
-                        pass
-                    else:
-                        print("FAILED ACTION: there is no any job in conveyor yr-2")
-                        pass
-                else:
-                    print("FAILED ACTION: agent status is not idle")
-
-            elif actions[i] == 3:
-                print("DECLINE")
-                observation[self.state_pick_job_window_location]=0
-                pass
-
-            elif actions[i] == 4:
-                '''
-                CONTINUE
-                A. saat agent sedang bekerja di workbench
-                1. cek apakah status agent saat ini adalah working pada workbench
-                2. jika ya, maka waktu process akan berkurang 1 iterasi
-                3. jika waktu process sudah 0, maka status agent akan berubah dari working menjadi completing
-                4. State:
-                    a. state status agent berubah dari working menjadi completing
-                    b. state operation berubah  menjadi 0
-                    c. state remaining operation bergeser sesuai window size
-
-                B. saat agent idle
-                1. cek apakah status agent saat ini adalah idle
-                2. jika ya, maka tidak ada perubahan dari timestep sebelumnya dan action wait akan diberikan pada conveyor yang sama.
-                '''
-
-                if observation[status_location]==2 and observation[1+self.agent_many_operations] !=0 and agent.workbench: # sekarang lagi working di workbench
-                    print("CONTINUE in working")
-                    # agent sedang bekerja
-                    self.is_status_working_succeed[i]=True
-                    if agent.processing_time_remaining > 0:
-                        agent.processing_time_remaining -= 1
-                        print("agent.processing_time_remaining: ", agent.processing_time_remaining)
-                    elif agent.processing_time_remaining == 0:
-                        observation[status_location]= 3 # working menjadi completing
-                        self.is_status_working_succeed[i]=False # operasi selesai dan agent tidak bekerja
-                        print("processing_time_remaining is 0")
-                        print("observation[status_location]: ", observation[status_location])
-
-                    else:
-                        print("FAILED ACTION: agent.processing_time_remaining")
-
-                elif observation[status_location]==1: 
-                    print("CONTINUE in idle")
-                    pass
+            elif actions[i] == 4: # CONTINUE
+                observation, agent  = self.action_continue(observation, agent, i, status_location)
+      
         
             '''
             RETURN TO CONVEYOR
@@ -474,25 +488,35 @@ class FJSPEnv(gym.Env):
 def FAA_action(states):
     actions=[]
     for i, state in enumerate(states):
-        print("aa: ", state[env.state_first_job_operation_location[2]])
+        if state[env.state_operation_now_location]==0:
 
-        if state[env.state_status_location_all[i]]==1 and state[env.state_operation_now_location]==0: # agent accept dan operasi pekerjaan belum di assign
-            actions.append(0)
-        elif state[env.state_status_location_all[i]]==2 and state[env.state_operation_now_location]!=0: # agent working
-            actions.append(4)
+            if state[env.state_status_location_all[i]]==1:
+                actions.append(0) # accept saat di workbench
+            elif (state[env.state_first_job_operation_location[0]]!=0 and 
+                  state[env.state_first_job_operation_location[0]] in state[env.state_operation_capability_location]): # ada job di yr
+                actions.append(0) # Accept saat di conveyor
+            elif (state[env.state_first_job_operation_location[1]]!=0 and 
+                  state[env.state_first_job_operation_location[1]] in state[env.state_operation_capability_location]):# ada job di yr-1
+                actions.append(1) # wait yr-1
+            elif (state[env.state_first_job_operation_location[2]]!=0 and 
+                  state[env.state_first_job_operation_location[2]] in state[env.state_operation_capability_location]):# ada job di yr-2
+                actions.append(2) # wait yr-2
+            elif np.array_equal(state[env.state_first_job_operation_location], [0, 0, 0]):
+                #print("i:", i)
+                actions.append(4) # continue
+            else:
+                print("milih decline")
+                actions.append(3) # Decline
 
-        elif state[env.state_first_job_operation_location[0]]!=0: # ada job di yr
-            actions.append(0)
-        elif state[env.state_first_job_operation_location[1]]!=0:# ada job di yr-1
-            actions.append(1) 
-        elif state[env.state_first_job_operation_location[2]]!=0: # ada job di yr-2
-            actions.append(2)
+        elif state[env.state_operation_now_location]!=0 and state[env.state_status_location_all[i]]==2: # agent working hingga completing
+                actions.append(4) # continue
+
         else:
-            actions.append(4) # continues
+            actions.append(None)
     return actions
 
 if __name__ == "__main__":
-    env = FJSPEnv(window_size=3, num_agents=3, max_steps=100)
+    env = FJSPEnv(window_size=3, num_agents=3, max_steps=20)
     state, info = env.reset(seed=42)
     #nv.render()
     total_reward = 0

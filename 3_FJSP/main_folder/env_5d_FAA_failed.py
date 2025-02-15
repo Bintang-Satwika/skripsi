@@ -383,6 +383,7 @@ class FJSPEnv(gym.Env):
                         observation[self.state_operation_now_location]=0
                         #print("self.conveyor.job_details: ", self.conveyor.job_details)
                         #print("agent.workbench after: ", agent.workbench)
+                    # mengembalikan ke conveyor jika operasi product belum selesai
                     if agent.workbench:
                         if list(agent.workbench.values())[0][0] in observation[self.state_operation_capability_location]:
                             #print( list(agent.workbench.values())[0][0] )
@@ -391,7 +392,6 @@ class FJSPEnv(gym.Env):
                             observation[status_location]=2
                             observation[self.state_operation_now_location]=list(agent.workbench.values())[0][0]
                         else:
-                            # mengembalikan ke conveyor jika operasi product belum selesai
                             self.product_return_to_conveyor[i]=True
                         
                     # mengupdate job_details
@@ -451,10 +451,9 @@ class FJSPEnv(gym.Env):
         reward_working_all = self.reward_working(self.observation_all, self.is_status_working_succeed )
         reward_step_all = self.reward_complete()
         reward_agent_all=-1.1+reward_wait_all+reward_working_all+reward_step_all
-        print("reward_wait_all: ", reward_wait_all)
-        print("reward_working_all: ", reward_working_all)
-        print("reward_step_all: ", reward_step_all)
-        print("reward_agent_all: ", reward_agent_all)
+        # print("reward_wait_all: ", reward_wait_all)
+        # print("reward_working_all: ", reward_working_all)
+        # print("reward_agent_all: ", reward_agent_all)
         done_step = self.step_count >= self.max_steps
         truncated_step = True if len(self.conveyor.product_completed)>= self.n_jobs else False
         self.observation_all=next_observation_all
@@ -499,7 +498,8 @@ class FJSPEnv(gym.Env):
         #print("-" * 50)
 
 
-def FCFS_action(states):
+
+def FCFS_action(states,env):
     actions=[]
     for i, state in enumerate(states):
         if state[env.state_operation_now_location]==0:
@@ -534,8 +534,109 @@ def FCFS_action(states):
             print("PASTI ADA YANG SALAH")
     return actions
 
+def FAA_action(states, env):
+    actions=[0,0,0]
+    
+    states = np.array([
+        [3, 1, 2, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0],
+        [7, 2, 3, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0],
+        [11, 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    ])
+    print("states: \n", states)
+    
+    # # mengambil index agent yang memiliki status 0 (idle) dan sedang tidak ada operasi (operasi now=0)
+    # agents_available=  list(sorted(np.where(states[0, env.state_status_location_all] == 0 and states[agent_id, env.state_operation_now_location] == 0)[0], reverse=True))
+    # print("agent_available: ", agents_available)
+    # for  agent_id in agents_available:
+    #     print("agent_id: ", agent_id)
+    #     # jika jenis operasi job adalah jenis operasi yang bisa dikerjakan oleh agent
+    #     if states[agent_id, env.state_first_job_operation_location[-1]] in states[agent_id, env.state_operation_capability_location]:
+            
+    #         print("actions: ", actions)
 
+    # if states[0,env.first_job_operation_location[0]]!=0:
+    #     if (states[1:3, env.state_status_location_all[2]]==0 and 
+    #         states[1:3, env.state_operation_now_location]==0 and
+    #         states[1:3, env.state_first_job_operation_location[-1]] in states[1:3, env.state_operation_capability_location]):
+    #         actions[0]=3 # agent-1 DECLINE 
+    if states[0, env.state_first_job_operation_location[-1]] in states[1:2+1, env.state_operation_capability_location]:
+        print("ADA di agent-3 atau 2")
+        actions[0]=0
+    # elif states[0, env.state_first_job_operation_location[-1]] in states[1, env.state_operation_capability_location]:
+    #     print("ADA di agent-2")
+    else:
+        print("kosong")
+    if states[1, env.state_first_job_operation_location[-1]] in states[2, env.state_operation_capability_location]:
+        actions[1]=0
+        print("ADA di agent-3")
 
+    
+
+    
+def FAA_action_dummy(states):
+    """
+    Fastest Agent Available (FAA) rule–based policy.
+    
+    Parameters:
+      states: NumPy array of shape (num_agents, state_dim) representing the observation of each agent.
+              The state indices used are:
+                - state[0]: fixed position (yr)
+                - state[1:3]: operation_capability (not used directly here)
+                - state[3]: operation_now (0 means idle)
+                - state[4], state[5], state[6]: status for agents 1,2,3 respectively (0 means idle)
+                - state[7:10]: first job operation window (for agent1,2,3 respectively)
+                - (Other indices are not used in FAA_action.)
+    
+    Returns:
+      actions: A list of actions (one per agent), where:
+          0 = ACCEPT,
+          1 = WAIT,
+          4 = CONTINUE.
+    Policy (using only state):
+      - If an agent is busy (state[3] ≠ 0), then action = CONTINUE (4).
+      - Otherwise, if a job is available at the fixed position (i.e. the corresponding element in 
+        state_first_job_operation is nonzero), then among those idle agents the fastest is chosen to ACCEPT (0)
+        and all others WAIT (1).
+      - If no job is available (first window element is 0), then CONTINUE (4).
+    Note: The fixed ranking is:
+          Agent 3 (index 2) is fastest, then Agent 2 (index 1), then Agent 1 (index 0).
+    """
+    num_agents = states.shape[0]
+    actions = [None] * num_agents
+
+    # Fixed indices from your environment:
+    STATE_OPERATION_NOW = 3
+    STATE_STATUS = [4, 5, 6]
+    STATE_FIRST_JOB_OPERATION = [7, 8, 9]
+
+    # Determine candidate (fastest idle agent that sees a job).
+    candidate_index = None
+    # Check in fixed order: agent3 (index 2), then agent2 (index 1), then agent1 (index 0).
+    if num_agents >= 3:
+        if states[2, STATE_OPERATION_NOW] == 0 and states[2, STATE_STATUS[2]] == 0 and states[2, STATE_FIRST_JOB_OPERATION[2]] != 0:
+            candidate_index = 2
+    if candidate_index is None and num_agents >= 2:
+        if states[1, STATE_OPERATION_NOW] == 0 and states[1, STATE_STATUS[1]] == 0 and states[1, STATE_FIRST_JOB_OPERATION[1]] != 0:
+            candidate_index = 1
+    if candidate_index is None:
+        if states[0, STATE_OPERATION_NOW] == 0 and states[0, STATE_STATUS[0]] == 0 and states[0, STATE_FIRST_JOB_OPERATION[0]] != 0:
+            candidate_index = 0
+
+    # Now assign actions:
+    for i in range(num_agents):
+        # If busy, always continue.
+        if states[i, STATE_OPERATION_NOW] != 0:
+            actions[i] = 4
+        else:
+            # Agent is idle:
+            if states[i, STATE_FIRST_JOB_OPERATION[i]] != 0:  # job available at fixed slot for agent i
+                if candidate_index is not None and i == candidate_index:
+                    actions[i] = 0  # ACCEPT for fastest idle candidate.
+                else:
+                    actions[i] = 1  # WAIT for other idle agents.
+            else:
+                actions[i] = 4  # CONTINUE if no job available.
+    return actions
 
 if __name__ == "__main__":
     env = FJSPEnv(window_size=3, num_agents=3, max_steps=200)
@@ -544,8 +645,8 @@ if __name__ == "__main__":
     total_reward = 0
     done = False
     truncated = False
-    print("Initial state:", state)
-    while not done and not truncated:
+    # print("Initial state:", state)
+    for _ in range(0,1):
         if len(env.conveyor.product_completed)>= env.n_jobs:
             print("All jobs are completed.")
             break
@@ -556,25 +657,25 @@ if __name__ == "__main__":
         # Untuk contoh, gunakan aksi acak
         #actions = env.action_space.sample()
 
-        actions=FCFS_action(state)
+        actions=FAA_action(state, env)
         if None in actions:
             print("FAILED ACTION: ", actions)
             break
-        #print("state: ", state)
-        print("Actions:", actions)
-        next_state, reward, done, truncated, info = env.step(actions)
-        #print("Reward:", reward)
-        print("NEXT STATE:", next_state)
-        total_reward += reward
-        env.render()
-        print()
-        print("-" * 100)
-        state = next_state
-    print("len(env.conveyor.product_completed)", len(env.conveyor.product_completed))
-    print("Episode complete. Total Reward:", total_reward, "jumlah step:", env.step_count)
-    order = {'A': 0, 'B': 1, 'C': 2}
+        # #print("state: ", state)
+        # print("Actions:", actions)
+        # next_state, reward, done, truncated, info = env.step(actions)
+        # #print("Reward:", reward)
+        # print("NEXT STATE:", next_state)
+        # total_reward += reward
+        # env.render()
+        # print()
+        # print("-" * 100)
+        # state = next_state
+    # print("len(env.conveyor.product_completed)", len(env.conveyor.product_completed))
+    # print("Episode complete. Total Reward:", total_reward, "jumlah step:", env.step_count)
+    # order = {'A': 0, 'B': 1, 'C': 2}
 
-    # Sorting by product type first, then by numeric value
-    sorted_jobs = sorted(env.conveyor.product_completed, key=lambda x: (order[x[0]], int(x[2:])))
+    # # Sorting by product type first, then by numeric value
+    # sorted_jobs = sorted(env.conveyor.product_completed, key=lambda x: (order[x[0]], int(x[2:])))
 
-    print("product sorted: ",sorted_jobs)
+    # print("product sorted: ",sorted_jobs)

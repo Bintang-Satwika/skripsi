@@ -57,7 +57,7 @@ class FJSPEnv(gym.Env):
         #---------------------------------------------------------------------
         self.agent_many_operations= 2
         self.agent_speeds = [1, 2, 3]  # Agent2 2x lebih cepat; Agent3 3x lebih cepat
-        self.base_processing_times = [6, 10, 15]  #  waktu dasar untuk setiap operasi
+        self.base_processing_times = [6, 10, 12]  #  waktu dasar untuk setiap operasi
         
         self.agents = []
 
@@ -406,6 +406,10 @@ class FJSPEnv(gym.Env):
                 # menyimpan job ke buffer untuk iterasi selanjutnya agar dapat dipindahkan ke conveyor
                 #agent.buffer_job_to_conveyor=agent.workbench
                 
+            # bila tidak ada operasi job sama sekalipun
+            if sum(observation[self.state_first_job_operation_location])==0:
+                observation[self.state_pick_job_window_location]=0
+                
             self.agents[i]=agent
             next_observation_all[i]=observation
 
@@ -451,10 +455,10 @@ class FJSPEnv(gym.Env):
         reward_working_all = self.reward_working(self.observation_all, self.is_status_working_succeed )
         reward_step_all = self.reward_complete()
         reward_agent_all=-1.1+reward_wait_all+reward_working_all+reward_step_all
-        print("reward_wait_all: ", reward_wait_all)
-        print("reward_working_all: ", reward_working_all)
-        print("reward_step_all: ", reward_step_all)
-        print("reward_agent_all: ", reward_agent_all)
+        # print("reward_wait_all: ", reward_wait_all)
+        # print("reward_working_all: ", reward_working_all)
+        # print("reward_step_all: ", reward_step_all)
+        # print("reward_agent_all: ", reward_agent_all)
         done_step = self.step_count >= self.max_steps
         truncated_step = True if len(self.conveyor.product_completed)>= self.n_jobs else False
         self.observation_all=next_observation_all

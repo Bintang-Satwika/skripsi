@@ -3,7 +3,7 @@ import random
 import math
 import gymnasium as gym
 from gymnasium import spaces
-from circular_conveyor_3 import CircularConveyor
+from circular_conveyor_2 import CircularConveyor
 from agent_3 import Agent
 '''
 1. Urutan update state-> move conveyor -> generate jobs -> update state Syrt
@@ -144,7 +144,7 @@ class FJSPEnv(gym.Env):
         if observation[self.state_operation_now_location]==0  and not agent.workbench:
 
             if  observation[status_location]==1 and self.is_job_moving_to_workbench[i] :
-                print("ACCEPT sudah di workbench")
+                #print("ACCEPT sudah di workbench")
                 self.is_job_moving_to_workbench[i]=False
                 agent.workbench=agent.buffer_job_to_workbench
                 agent.buffer_job_to_workbench={}
@@ -153,7 +153,6 @@ class FJSPEnv(gym.Env):
                 observation[status_location]=2 # accept menjadi working
 
                 list_operation=list(agent.workbench.values())[0] # karena [[1,2.3]] jadi [1,2,3]
-                print("list_operation: ", list_operation)
 
                 # diambil operation job pertama karena sudah diurutkan dari 1 hingga 3
                 if list_operation[0] in observation[self.state_operation_capability_location]:
@@ -170,14 +169,14 @@ class FJSPEnv(gym.Env):
 
                     # processing time agent akan mulai dihitung
                     agent.processing_time_remaining = agent.processing_time(self.base_processing_times[select_operation-1])
-                    print("agent.processing_time_remaining: ", agent.processing_time_remaining)
+                    #print("agent.processing_time_remaining: ", agent.processing_time_remaining)
                 else:
                     print("FAILED ACTION: operation capability is False")
                     self.FAILED_ACTION=True
         
             elif observation[status_location]==0  and observation[self.state_pick_job_window_location]== 1 and not self.is_job_moving_to_workbench[i] :
                 if  observation[self.state_first_job_operation_location[0]] in  observation[self.state_operation_capability_location]:
-                    print("ACCEPT di conveyor yr")
+                    #print("ACCEPT di conveyor yr")
                     # idle menjadi accept
                     observation[status_location]=1 
                     # job akan dipindahkan ke workbench
@@ -187,7 +186,7 @@ class FJSPEnv(gym.Env):
                     # conveyor pada yr  akan kosong
                     self.is_job_conveyor_yr_remove=True
                     self.conveyor.conveyor[int(observation[self.state_yr_location])] = None
-                    print("self.conveyor.conveyor: ", self.conveyor.conveyor)
+                    #print("self.conveyor.conveyor: ", self.conveyor.conveyor)
                 else:
                     print("FAILED ACTION: observation first job operation is not in operation capability")
                     self.FAILED_ACTION=True
@@ -214,9 +213,7 @@ class FJSPEnv(gym.Env):
                 4. jika tidak, maka tidak ada perubahan dari timestep sebelumnya
                 5. untuk menghitung reward, maka agent akan mendapatkan reward jika berhasil menunggu
                 '''
-                # product_name=self.conveyor.conveyor[yr-1]
-                # req_ops=self.conveyor.job_details.get(product_name, [])
-                print("WAIT yr-1")
+                #print("WAIT yr-1")
                 observation[self.state_pick_job_window_location]=1
                 self.is_action_wait_succeed[i]=True
                 
@@ -230,9 +227,7 @@ class FJSPEnv(gym.Env):
                 4. jika tidak, maka tidak ada perubahan dari timestep sebelumnya
                 5. untuk menghitung reward, maka agent akan mendapatkan reward jika berhasil menunggu
                 '''
-                # product_name=self.conveyor.conveyor[yr-2]
-                # req_ops=self.conveyor.job_details.get(product_name, [])
-                print("WAIT yr-2")
+                #print("WAIT yr-2")
                 observation[self.state_pick_job_window_location]=2
                 self.is_action_wait_succeed[i]=True
                 
@@ -253,7 +248,7 @@ class FJSPEnv(gym.Env):
         1. cek apakah status agent saat ini adalah idle
         2. jika ya, maka agent akan menolak job pada yr
         '''
-        print("DECLINE")
+        #print("DECLINE")
         observation[self.state_pick_job_window_location]=0
         
         return observation, agent
@@ -277,32 +272,29 @@ class FJSPEnv(gym.Env):
         '''
 
         if observation[status_location]==2 and observation[1+self.agent_many_operations] !=0 and agent.workbench: # sekarang lagi working di workbench
-            print("CONTINUE in working")
+            #print("CONTINUE in working")
             # agent sedang bekerja
             self.is_status_working_succeed[i]=True
             if agent.processing_time_remaining > 0:
                 agent.processing_time_remaining -= 1
-                print("agent.processing_time_remaining: ", agent.processing_time_remaining)
+                #print("agent.processing_time_remaining: ", agent.processing_time_remaining)
                 self.total_process_done+=1
             elif agent.processing_time_remaining == 0:
                 observation[status_location]= 3 # working menjadi completing
                 self.is_status_working_succeed[i]=False # operasi selesai dan agent tidak bekerja
                 self.total_process_done+=1
-                print("processing_time_remaining is 0")
-                print("observation[status_location]: ", observation[status_location])
+                #print("processing_time_remaining is 0")
 
             else:
                 print("FAILED ACTION: agent.processing_time_remaining")
                 self.FAILED_ACTION=True
 
         elif observation[status_location]==1: 
-            print("CONTINUE in idle")
+            #print("CONTINUE in idle")
+            pass
             
 
         return observation, agent
-
-
-
 
 
     def update_state(self, observation_all,  actions):
@@ -310,7 +302,7 @@ class FJSPEnv(gym.Env):
         # next_observation_all=np.array(next_observation_all)
 
         for i, agent in enumerate(self.agents):
-            print("\nAgent-", i+1, end=": ")
+            #print("\nAgent-", i+1, end=": ")
             #print("window product: ", agent.window_product, "\nworkbench: ", agent.workbench)
             observation=observation_all[i]
             status_location=self.state_status_location_all[i]
@@ -353,11 +345,9 @@ class FJSPEnv(gym.Env):
             # mengembalikan product ke conveyor jika operasi belum selesai dan product masih ada operasi selanjutnya
             # (kodingan ini harus ditaruh sebelum self.product_return_to_conveyor[i] menjadi True)
             if self.product_return_to_conveyor[i] and agent.workbench:
-                    print("halo semua")
                     # jika conveyor pada yr kosong, maka product akan dikembalikan ke conveyor
                     if self.conveyor.conveyor[int(observation[self.state_yr_location])] is None:
                         # mengembalikan product ke conveyor
-                        print("berhasil masuk sini")
                         self.conveyor.conveyor[int(observation[self.state_yr_location])]=str(list(agent.workbench)[0])
                         print("self.conveyor.conveyor: ", self.conveyor.conveyor)
                         self.product_return_to_conveyor[i]= False
@@ -370,7 +360,7 @@ class FJSPEnv(gym.Env):
             
             if observation[status_location]==3 and not self.product_return_to_conveyor[i]:
                 #print("COMPLETING masuk sini")
-                print("agent.workbench before: ", agent.workbench)
+                #print("agent.workbench before: ", agent.workbench)
                 for key, vektor in agent.workbench.items():
                     # mengurangi operation yang sudah selesai
                     if len(vektor)>1:
@@ -386,7 +376,6 @@ class FJSPEnv(gym.Env):
                     if agent.workbench:
                         if list(agent.workbench.values())[0][0] in observation[self.state_operation_capability_location]:
                             #print( list(agent.workbench.values())[0][0] )
-                            print("YES")
                             self.product_return_to_conveyor[i]=False
                             observation[status_location]=2
                             observation[self.state_operation_now_location]=list(agent.workbench.values())[0][0]
@@ -401,7 +390,7 @@ class FJSPEnv(gym.Env):
                         self.conveyor.job_details.pop(key)
                 
                     #print("self.conveyor.job_details: ", self.conveyor.job_details)
-                print("agent.workbench after: ", agent.workbench)
+                #print("agent.workbench after: ", agent.workbench)
 
                 # menyimpan job ke buffer untuk iterasi selanjutnya agar dapat dipindahkan ke conveyor
                 #agent.buffer_job_to_conveyor=agent.workbench
@@ -454,7 +443,7 @@ class FJSPEnv(gym.Env):
         reward_wait_all = self.reward_wait(actions, self.is_action_wait_succeed,factor_x=1)
         reward_working_all = self.reward_working(self.observation_all, self.is_status_working_succeed )
         reward_step_all = self.reward_complete()
-        reward_agent_all=-0.5+reward_wait_all+reward_working_all+reward_step_all
+        reward_agent_all=-1+reward_wait_all+reward_working_all+reward_step_all
         # print("reward_wait_all: ", reward_wait_all)
         # print("reward_working_all: ", reward_working_all)
         # print("reward_step_all: ", reward_step_all)
@@ -486,7 +475,7 @@ class FJSPEnv(gym.Env):
                 rewards.append(0)
         return np.multiply(k_working,rewards)
     
-    def reward_complete(self, k_complete=0.5):
+    def reward_complete(self, k_complete=0.8):
         value = k_complete*self.total_process_done
         self.total_process_done=0
         return value
@@ -498,10 +487,14 @@ class FJSPEnv(gym.Env):
             #print("self.conveyor.job_details:, ", self.conveyor.job_details)
             print(f"Status Agent {agent.id} at position {int(self.observation_all[a][0])}: {int(self.observation_all[a][self.state_status_location_all[a]]) }")
             print("window product: ", agent.window_product, "\nworkbench: ", agent.workbench)
-            print()
+            if agent.processing_time_remaining>0:
+                print("agent.processing_time_remaining: ", agent.processing_time_remaining)
+            print("\n")
         self.conveyor.display()
         #print("-" * 50)
 
+
+# ============================================================================
 
 def FCFS_action(states):
     actions=[]
@@ -537,7 +530,6 @@ def FCFS_action(states):
             actions.append(None)
             print("PASTI ADA YANG SALAH")
     return actions
-
 
 
 

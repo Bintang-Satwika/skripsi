@@ -1,4 +1,4 @@
-from env_5c import FJSPEnv
+from env_5c_2 import FJSPEnv
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import layers, models
@@ -6,16 +6,31 @@ import random
 import os
 import pickle
 import json
+from collections import deque
 
 class DDQN_model:
-    def __init__(self):
+    def __init__(self,
+        buffer_length=500000,
+        batch_size=64,
+        update_delay=2,
+        lr=0.0001,
+        tau=0.005,
+        gamma=0.98,
+        ):
+        self.gamma = gamma
+        self.lr = lr
+        self.tau = tau
+        self.epsilon=1
+        self.epsilon_decay=0.9
+        self.update_delay=update_delay
+        self.batch_size=batch_size
+    
         self.dqn_network= self.create_dqn_network()
         self.target_dqn_network =self.create_dqn_network()
         self.target_dqn_network.set_weights(self.dqn_network.get_weights())
         # Optimizer
         self.dqn_optimizer = tf.keras.optimizers.Adam(learning_rate=self.lr)
-        self.epsilon=1
-        self.epsilon_decay=0.9
+        self.memory_B = deque(maxlen=int(buffer_length))
 
     def save_models(self, episode):
         """
@@ -63,6 +78,17 @@ class DDQN_model:
         model = models.Model(inputs=state_input, outputs=output)
         return model
     
+    def take_RL_minibatch(self):
+        """Ambil minibatch dari buffer RL."""
+        minibatch = random.sample(self.memory_B, self.batch_size)
+        mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones = zip(*minibatch)
+        mb_states = tf.convert_to_tensor(mb_states, dtype=tf.float32)
+        mb_actions = tf.convert_to_tensor(mb_actions, dtype=tf.float32)
+        mb_rewards = tf.convert_to_tensor(mb_rewards, dtype=tf.float32)
+        mb_next_states = tf.convert_to_tensor(mb_next_states, dtype=tf.float32)
+        mb_dones = tf.convert_to_tensor(mb_dones, dtype=tf.float32)
+        return mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones
+    
     def update_RL_memory(self, state, action, reward, next_state, done):
         """Simpan (s, a, r, s', done) ke buffer RL."""
         self.memory_B.append((state, action, reward, next_state, done))
@@ -87,40 +113,40 @@ class DDQN_model:
     def update_epsilon(self):
         self.epsilon = max(0.01, self.epsilon * self.epsilon_decay)
 
-def FCFS_action(states):
-    actions=[]
-    for i, state in enumerate(states):
-        if state[env.state_operation_now_location]==0:
+    def train_double_dqn(self):
+        #tf.print("\n")
+        mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones = self.take_RL_minibatch()
+        #tf.print("mb_actions_before: ", mb_actions)
+        mb_actions = tf.cast(mb_actions, tf.int32)
+        # tf.print("mb_actions: ", mb_actions)
+        # tf.print("tf.one_hot(mb_actions, self.action_dim): ", tf.one_hot(mb_actions, self.action_dim))
+        with tf.GradientTape() as tape:
+            mb_Q_values= self.dqn_network(mb_states, training=True)
+            mb_Q_values = tf.reduce_sum(mb_Q_values * tf.one_hot(mb_actions, self.action_dim), 
+                                        axis=1)
 
-            if state[env.state_status_location_all[i]]==1:
-                actions.append(0) # accept saat di workbench
-            elif (state[env.state_first_job_operation_location[0]]!=0 and 
-                  state[env.state_first_job_operation_location[0]] in state[env.state_operation_capability_location]
-                  and state[env.state_pick_job_window_location] ==1 ):
-                actions.append(0) # Accept saat di conveyor yr
-            elif (state[env.state_first_job_operation_location[1]]!=0 and 
-                  state[env.state_first_job_operation_location[1]] in state[env.state_operation_capability_location]):# ada job di yr-1
-                actions.append(1) # wait yr-1
-            elif (state[env.state_first_job_operation_location[2]]!=0 and 
-                  state[env.state_first_job_operation_location[2]] in state[env.state_operation_capability_location]):# ada job di yr-2
-                actions.append(2) # wait yr-2
-            elif np.array_equal(state[env.state_first_job_operation_location], [0, 0, 0]):
-                actions.append(4) # continue
-            else:
-                print("milih decline")
-                actions.append(3) # Decline
+            mb_Q_values_next= self.dqn_network(mb_next_states, training=False)
+            mb_actions_next = tf.argmax(mb_Q_values_next, axis=1)
 
-        elif state[env.state_operation_now_location]!=0:
-            if state[env.state_status_location_all[i]]==2 or  state[env.state_status_location_all[i]]==3 : # agent working hingga completing
-                actions.append(4) # continue
-            else:
-                print("FAILED ACTION: agent status is not working")
-                actions.append(None)
+            #mb_target_Q_values_next = self.target_dqn_network(mb_next_states, training=False)[mb_actions_next]
+        
+            mb_target_Q_values_next = self.target_dqn_network(mb_next_states, training=False)
+            mb_target_Q_values_next = tf.reduce_sum(mb_target_Q_values_next * 
+                                                    tf.one_hot(mb_actions_next, self.action_dim), 
+                                                    axis=1)
+            
+            y = mb_rewards + (1.0 - mb_dones) * self.gamma * mb_target_Q_values_next
+            loss = tf.reduce_mean(tf.square(y - mb_Q_values))
 
-        else:
-            actions.append(None)
-            print("PASTI ADA YANG SALAH")
-    return actions
+        # Menghitung gradien dan mengupdate bobot model
+        grads = tape.gradient(loss,  self.dqn_network.trainable_variables)
+        self.dqn_optimizer.apply_gradients(zip(grads, self.dqn_network.trainable_variables))
+        del tape
+        
+        # Periodically update target network (soft update)
+        if self.iterasi % self.update_delay == 0:
+            self.update_target_weights()
+
 
 
 def masking_action(states, env):

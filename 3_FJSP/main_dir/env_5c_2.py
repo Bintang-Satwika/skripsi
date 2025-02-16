@@ -3,7 +3,7 @@ import random
 import math
 import gymnasium as gym
 from gymnasium import spaces
-from circular_conveyor_3 import CircularConveyor
+from circular_conveyor_3_2 import CircularConveyor
 from agent_3 import Agent
 '''
 1. Urutan update state-> move conveyor -> generate jobs -> update state Syrt
@@ -96,6 +96,7 @@ class FJSPEnv(gym.Env):
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
+        self.__init__(window_size=self.window_size, num_agents=self.num_agents, max_steps=self.max_steps)
         self.step_count = 0
         # Reset conveyor dan agen
         self.conveyor = CircularConveyor(self.num_sections, self.max_capacity, self.arrival_rate, 
@@ -172,6 +173,7 @@ class FJSPEnv(gym.Env):
                     #print("agent.processing_time_remaining: ", agent.processing_time_remaining)
                 else:
                     print("FAILED ACTION: operation capability is False")
+                    print("agent-%d"%i)
                     self.FAILED_ACTION=True
         
             elif observation[status_location]==0  and observation[self.state_pick_job_window_location]== 1 and not self.is_job_moving_to_workbench[i] :
@@ -192,6 +194,7 @@ class FJSPEnv(gym.Env):
                     self.FAILED_ACTION=True
             else:
                 print("FAILED ACTION: agent status is not idle or job is not in conveyor")
+                print("agent-%d"%i)
                 self.FAILED_ACTION=True
 
         else:
@@ -349,14 +352,15 @@ class FJSPEnv(gym.Env):
                     if self.conveyor.conveyor[int(observation[self.state_yr_location])] is None:
                         # mengembalikan product ke conveyor
                         self.conveyor.conveyor[int(observation[self.state_yr_location])]=str(list(agent.workbench)[0])
-                        print("self.conveyor.conveyor: ", self.conveyor.conveyor)
+                        #print("self.conveyor.conveyor: ", self.conveyor.conveyor)
                         self.product_return_to_conveyor[i]= False
                         # mengosongkan workbench -> agent menjadi idle -> tidak ada operasi pada robot
                         agent.workbench={}
                         observation[status_location]=0
                         observation[1+self.agent_many_operations]=0
                     else:
-                        print("CAN'T RETURN: conveyor yr is not empty")
+                        #print("CAN'T RETURN: conveyor yr is not empty")
+                        pass
             
             if observation[status_location]==3 and not self.product_return_to_conveyor[i]:
                 #print("COMPLETING masuk sini")
@@ -438,7 +442,6 @@ class FJSPEnv(gym.Env):
 
 
         next_observation_all= self.update_state(observation_all=self.observation_all, actions=actions)
-        print()
 
         reward_wait_all = self.reward_wait(actions, self.is_action_wait_succeed,factor_x=1)
         reward_working_all = self.reward_working(self.observation_all, self.is_status_working_succeed )

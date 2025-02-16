@@ -19,7 +19,7 @@ class CircularConveyor:
         self.product_operations = {
             "A": [1,2,3],
             "B": [2,3],
-            "C": [1,2]
+            "C": [3],
         }
         self.job_index = 0 
         self.job_sequence = list(self.total_jobs.keys())

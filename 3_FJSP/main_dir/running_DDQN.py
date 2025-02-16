@@ -1,4 +1,4 @@
-from env_5c_2 import FJSPEnv
+from env_5c_3 import FJSPEnv
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import layers, models
@@ -7,11 +7,12 @@ import os
 import pickle
 import json
 from collections import deque
+from tqdm import tqdm
 
 class DDQN_model:
     def __init__(self,
         buffer_length=500000,
-        batch_size=64,
+        batch_size=4,
         update_delay=2,
         lr=0.0001,
         tau=0.005,
@@ -81,14 +82,30 @@ class DDQN_model:
         return model
     
     def take_RL_minibatch(self):
-        """Ambil minibatch dari buffer RL."""
+        """
+        Sample a minibatch from the replay buffer.
+        Each minibatch element contains multi-agent data:
+          - state: (3, 14)
+          - action: (3,)
+          - reward: (3,)
+          - next_state: (3, 14)
+          - done: (3,)
+        After stacking, the shapes become:
+          - mb_states: (batch_size, 3, 14)
+          - mb_actions: (batch_size, 3)
+          - mb_rewards: (batch_size, 3)
+          - mb_next_states: (batch_size, 3, 14)
+          - mb_dones: (batch_size, 3)
+        """
         minibatch = random.sample(self.memory_B, self.batch_size)
-        mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones = zip(*minibatch)
-        mb_states = tf.convert_to_tensor(mb_states, dtype=tf.float32)
-        mb_actions = tf.convert_to_tensor(mb_actions, dtype=tf.float32)
-        mb_rewards = tf.convert_to_tensor(mb_rewards, dtype=tf.float32)
-        mb_next_states = tf.convert_to_tensor(mb_next_states, dtype=tf.float32)
-        mb_dones = tf.convert_to_tensor(mb_dones, dtype=tf.float32)
+        
+        # Unpack and stack the multi-agent data from each tuple
+        mb_states = tf.convert_to_tensor(np.stack([data[0] for data in minibatch]), dtype=tf.float32)
+        mb_actions = tf.convert_to_tensor(np.stack([data[1] for data in minibatch]), dtype=tf.float32)
+        mb_rewards = tf.convert_to_tensor(np.stack([data[2] for data in minibatch]), dtype=tf.float32)
+        mb_next_states = tf.convert_to_tensor(np.stack([data[3] for data in minibatch]), dtype=tf.float32)
+        mb_dones = tf.convert_to_tensor(np.stack([data[4] for data in minibatch]), dtype=tf.float32)
+
         return mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones
     
     def update_RL_memory(self, state, action, reward, next_state, done):
@@ -229,63 +246,69 @@ def masking_action(states, env):
        
 
 if __name__ == "__main__":
-    env = FJSPEnv(window_size=3, num_agents=3, max_steps=20)
+    env = FJSPEnv(window_size=3, num_agents=3, max_steps=10)
     DDQN=DDQN_model()
-
-    state, info = env.reset(seed=3)
-    #nv.render()
-    total_reward = 0
-    done = False
-    truncated = False
-    print("Initial state:", state)
-    while not done and not truncated:
-        if len(env.conveyor.product_completed)>= env.n_jobs:
-            print("All jobs are completed.")
-            break
+    for episode in tqdm(range(1, 1+ 1)):
+        state, info = env.reset(seed=episode)
+        reward_satu_episode = 0
+        done = False
+        truncated = False
+        print("\nEpisode:", episode)
+        
         if env.FAILED_ACTION:
             print("FAILED ENV")
             break
-        print("\nStep:", env.step_count)
 
-        mask_actions=masking_action(state, env)
-        actions=[]
-        dummy=1
-        for state, mask_action in zip(state, mask_actions):
-            #print("\nagent: ", dummy)
-            #print("state: ", state)
-            #print("mask action: ", mask_action)
-            action = DDQN.select_action_with_masking(state, mask_action)
-            actions.append(action)
-            #print("action: ", action)
-            dummy +=1
+        while not done:
+            
+            if len(env.conveyor.product_completed)>= env.n_jobs:
+                print("All jobs are completed.")
+                break
+            if env.step_count >= env.max_steps:
+                print("Max steps reached.")
+                break
 
+            mask_actions=masking_action(state, env)
+            actions=[]
+            # Multi-agent shared Neural Network
+            for single, mask_action in zip(state, mask_actions):
+                action = DDQN.select_action_with_masking(single, mask_action)
+                actions.append(action)
+                #dummy +=1
+            actions = np.array(actions)
 
+            if None in actions:
+                print("FAILED ACTION: ", actions)
+                break
 
+            next_state, reward, done, truncated, info = env.step(actions)
 
-        if None in actions:
-            print("FAILED ACTION: ", actions)
-            break
-        print("state: ", state)
-        print("Actions:", actions)
-        next_state, reward, done, truncated, info = env.step(actions)
-        #print("Reward:", reward)
-        #print("NEXT STATE:", next_state)
-        total_reward += reward
-        #env.render()
-        print()
-        print("-" * 100)
-        state = next_state
+            if env.FAILED_ACTION:
+                print("FAILED ENV")
+                break
+            done_buffer = np.array([done or truncated]*env.num_agents)
 
+            DDQN.update_RL_memory(state, actions, reward, next_state, done_buffer)
+            if len(DDQN.memory_B) >= DDQN.batch_size:
 
-    # print("state: ", state)
-    # print("mask action: ", mask_action)
-    # print("actions: ", actions)
-    # print("reward: ", reward)
-    print("len(env.conveyor.product_completed)", len(env.conveyor.product_completed))
-    print("Episode complete. Total Reward:", total_reward, "jumlah step:", env.step_count)
-    order = {'A': 0, 'B': 1, 'C': 2}
+                mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones = DDQN.take_RL_minibatch()
+                print("States batch shape:", mb_states.shape)
+                print("Actions batch shape:", mb_actions.shape)
+                print("Rewards batch shape:", mb_rewards.shape)
+                print("Next States batch shape:", mb_next_states.shape)
+                print("Dones batch shape:", mb_dones.shape)
+                print("\n")
+            #DDQN.train_double_dqn()
+            reward_satu_episode += reward
+            state = next_state
 
-    # Sorting by product type first, then by numeric value
-    sorted_jobs = sorted(env.conveyor.product_completed, key=lambda x: (order[x[0]], int(x[2:])))
+        #-------------------------------------------------
+        print("Episode complete. Total Reward:", reward_satu_episode, 
+              "jumlah step:", env.step_count, 
+              "product completed: ",len(env.conveyor.product_completed))
+        order = {'A': 0, 'B': 1, 'C': 2}
 
-    print("product sorted: ",sorted_jobs)
+        print("product completed: ",env.conveyor.product_completed)
+        sorted_jobs = sorted(env.conveyor.product_completed, key=lambda x: (order[x[0]], int(x[2:])))
+
+        #print("product sorted: ",sorted_jobs)

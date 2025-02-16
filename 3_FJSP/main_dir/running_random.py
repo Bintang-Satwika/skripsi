@@ -1,13 +1,12 @@
 from env_5c_3 import FJSPEnv
 import numpy as np
 import random
-
+from tqdm import tqdm
 
 def masking_action(states, env):
     mask_actions=[]
 
     for i, state in enumerate(states):
-        print("agent-", i+1)
         is_agent_working=False
         is_status_idle=False
         is_status_accept=False
@@ -75,54 +74,53 @@ def masking_action(states, env):
        
 
 if __name__ == "__main__":
-    env = FJSPEnv(window_size=3, num_agents=3, max_steps=700)
-    state, info = env.reset(seed=3)
-    #nv.render()
-    total_reward = 0
-    done = False
-    truncated = False
-    print("Initial state:", state)
-    while not done and not truncated:
-        if len(env.conveyor.product_completed)>= env.n_jobs:
-            print("All jobs are completed.")
-            break
-        if env.FAILED_ACTION:
-            print("FAILED ENV")
-            break
-        print("\nStep:", env.step_count)
-        # Untuk contoh, gunakan aksi acak
-        #actions = env.action_space.sample()
+    env = FJSPEnv(window_size=3, num_agents=3, max_steps=600)
+    for episode in tqdm(range(1, 1+ 1000)):
+        state, info = env.reset(seed=episode)
+        reward_satu_episode = 0
+        done = False
+        truncated = False
+        #print("\nEpisode:", episode)
+        #print("Initial state:", state)
+        while not done and not truncated:
+            if len(env.conveyor.product_completed)>= env.n_jobs:
+                print("All jobs are completed.")
+                break
 
-        mask_actions=masking_action(state, env)
-        actions=[]
-        for state, mask_action in zip(state, mask_actions):
-            print("state: ", state)
-            print("mask action: ", mask_action)
-            true_indices = np.where(mask_action)[0]
-            random_actions = random.choice(true_indices)
-            print("random actions: ", random_actions)
-            
-            actions.append(random_actions)
+            mask_actions=masking_action(state, env)
+            actions=[]
 
+            for single, mask_action in zip(state, mask_actions):
+                true_indices = np.where(mask_action)[0]
+                random_actions = random.choice(true_indices)
+                actions.append(random_actions)
 
-        if None in actions:
-            print("FAILED ACTION: ", actions)
-            break
-        #print("state: ", state)
-        print("Actions:", actions)
-        next_state, reward, done, truncated, info = env.step(actions)
-        #print("Reward:", reward)
-        print("NEXT STATE:", next_state)
-        total_reward += reward
-        env.render()
-        print()
-        print("-" * 100)
-        state = next_state
-    print("len(env.conveyor.product_completed)", len(env.conveyor.product_completed))
-    print("Episode complete. Total Reward:", total_reward, "jumlah step:", env.step_count)
-    order = {'A': 0, 'B': 1, 'C': 2}
+            actions = np.array(actions)
 
-    # Sorting by product type first, then by numeric value
-    sorted_jobs = sorted(env.conveyor.product_completed, key=lambda x: (order[x[0]], int(x[2:])))
+            if None in actions:
+                print("FAILED ACTION: ", actions)
+                break
 
-    print("product sorted: ",sorted_jobs)
+            next_state, reward, done, truncated, info = env.step(actions)
+            reward_satu_episode += reward
+            if env.FAILED_ACTION:
+                print("episode:", episode)
+                print("state:\n", state)
+                print("actions:", actions)
+                print("next_state:\n", next_state)
+                #print(env.observation_all)
+                #print("info:", info)
+                print("FAILED ENV")
+                break
+            state = next_state
+            #print("next_state:", next_state)
+
+        #print("Episode complete. Total Reward:", reward_satu_episode, "jumlah step:", env.step_count)
+        # order = {'A': 0, 'B': 1, 'C': 2}
+
+        # # Sorting by product type first, then by numeric value
+        # print("product completed: ",env.conveyor.product_completed)
+        # sorted_jobs = sorted(env.conveyor.product_completed, key=lambda x: (order[x[0]], int(x[2:])))
+
+        # print("product sorted: ",sorted_jobs)
+    print("selesai")

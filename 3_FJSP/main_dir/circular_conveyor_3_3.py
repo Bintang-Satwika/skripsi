@@ -19,7 +19,7 @@ class CircularConveyor:
         self.product_operations = {
             "A": [1,2,3],
             "B": [2,3],
-            "C": [1,2]
+            "C": [3],
         }
         self.job_index = 0 
         self.job_sequence = list(self.total_jobs.keys())
@@ -95,7 +95,7 @@ class CircularConveyor:
 if __name__ == "__main__":
     conveyor = CircularConveyor(num_sections=12, max_capacity=0.75, arrival_rate=0.3, num_agents=3, n_jobs=20)
 
-    for timestep in range(200):  # Run simulation
+    for timestep in range(10):  # Run simulation
         print(f"Time Step {timestep + 1}")
         conveyor.move_conveyor()
         conveyor.generate_jobs()
@@ -106,3 +106,4 @@ if __name__ == "__main__":
     print("conveyor.iteration: ", conveyor.iteration)
     print("Total Jobs Generated:", conveyor.total_jobs)
     print("Buffer:", conveyor.buffer_jobs)
+

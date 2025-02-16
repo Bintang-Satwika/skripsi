@@ -1,7 +1,7 @@
 import numpy as np
 import random
 import math
-# produk sekunesial dari A-B-C secara teratur tidak ada random poisson
+# produk  tidak ada random poisson, namun product  A-B-C dirandom choice
 
 class CircularConveyor:
     def __init__(self, num_sections: int, max_capacity: int, arrival_rate:float, num_agents: int, n_jobs: int):
@@ -63,21 +63,25 @@ class CircularConveyor:
             self.conveyor[0] = self.buffer_jobs.pop(0)
 
     def generate_jobs(self):
-            """Generates new jobs based on a Poisson process (if below maximum capacity)."""
-            self.iteration += 1
-            if self.iteration % 3 == 0:
-                new_job =1
-            else:
-                new_job =0
+        """Generates new jobs based on a Poisson process (if below maximum capacity)."""
+        self.iteration += 1
+        if self.iteration % 3 == 0:
+            new_job = 1
+        else:
+            new_job = 0
 
-            if new_job == 1:
-                self.sum_n_jobs += 1
+        if new_job == 1:
+            # Filter product types using the self.total_jobs counter (only choose if count is less than 7)
+            allowed_types = [ptype for ptype in self.total_jobs if self.total_jobs[ptype] < 7]
+            if not allowed_types:
+                # No product type is allowed (each has reached 7), so do nothing.
+                return
+
+            product_type = random.choice(allowed_types)
+            self.sum_n_jobs += 1
+            self.add_job(product_type)
+
                 
-                # Pilih produk berdasarkan pola siklik A-B-C
-                product_type = self.job_sequence[self.job_index]
-                self.job_index = (self.job_index + 1) % len(self.job_sequence)  # Perbarui indeks siklik
-                
-                self.add_job(product_type)
 
 
     def display(self):
@@ -91,7 +95,7 @@ class CircularConveyor:
 if __name__ == "__main__":
     conveyor = CircularConveyor(num_sections=12, max_capacity=0.75, arrival_rate=0.3, num_agents=3, n_jobs=20)
 
-    for timestep in range(30):  # Run simulation
+    for timestep in range(200):  # Run simulation
         print(f"Time Step {timestep + 1}")
         conveyor.move_conveyor()
         conveyor.generate_jobs()

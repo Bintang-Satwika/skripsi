@@ -17,11 +17,13 @@ class DDQN_model:
         tau=0.005,
         gamma=0.98,
         ):
+        self.state_dim= 14
+        self.action_dim=5
         self.gamma = gamma
         self.lr = lr
         self.tau = tau
         self.epsilon=1
-        self.epsilon_decay=0.9
+        self.epsilon_decay=0.92
         self.update_delay=update_delay
         self.batch_size=batch_size
     
@@ -102,13 +104,21 @@ class DDQN_model:
             target_var.assign(self.tau * main_var + (1.0 - self.tau) * target_var)
             
 
-    def select_action(self, state):
+    def select_action_with_masking(self, state, action_mask):
         if np.random.rand() < self.epsilon:
-            return random.randrange(self.action_dim)
+            #tf.print("Random action")
+            action_mask_index = np.where(action_mask)[0]
+            return random.choice(action_mask_index)
         else:
+            #tf.print("NN action")
             state_tensor = tf.convert_to_tensor([state], dtype=tf.float32)
             q_values = self.dqn_network(state_tensor)
-            return int(tf.argmax(q_values[0]).numpy())
+            action_mask_tensor = tf.convert_to_tensor(action_mask)
+            masked_q_values = tf.where(action_mask_tensor, q_values, tf.fill(tf.shape(q_values), -np.inf))
+            ##tf.print("masked_q_values: ", masked_q_values)
+            ##choose_action = tf.argmax(masked_q_values, axis=1)
+            ##tf.print("choose_action: ", choose_action)
+            return int(tf.argmax(masked_q_values, axis=1))
     
     def update_epsilon(self):
         self.epsilon = max(0.01, self.epsilon * self.epsilon_decay)
@@ -153,7 +163,6 @@ def masking_action(states, env):
     mask_actions=[]
 
     for i, state in enumerate(states):
-        print("agent-", i+1)
         is_agent_working=False
         is_status_idle=False
         is_status_accept=False
@@ -168,7 +177,6 @@ def masking_action(states, env):
         wait_yr_2_action=False
         decline_action=False
         continue_action=False
-        print
         if state[env.state_operation_now_location] !=0:
             is_agent_working=True
         if state[env.state_status_location_all[i]] ==0:
@@ -221,7 +229,9 @@ def masking_action(states, env):
        
 
 if __name__ == "__main__":
-    env = FJSPEnv(window_size=3, num_agents=3, max_steps=500)
+    env = FJSPEnv(window_size=3, num_agents=3, max_steps=20)
+    DDQN=DDQN_model()
+
     state, info = env.reset(seed=3)
     #nv.render()
     total_reward = 0
@@ -236,34 +246,41 @@ if __name__ == "__main__":
             print("FAILED ENV")
             break
         print("\nStep:", env.step_count)
-        # Untuk contoh, gunakan aksi acak
-        #actions = env.action_space.sample()
 
         mask_actions=masking_action(state, env)
         actions=[]
+        dummy=1
         for state, mask_action in zip(state, mask_actions):
-            print("state: ", state)
-            print("mask action: ", mask_action)
-            true_indices = np.where(mask_action)[0]
-            random_actions = random.choice(true_indices)
-            print("random actions: ", random_actions)
-            
-            actions.append(random_actions)
+            #print("\nagent: ", dummy)
+            #print("state: ", state)
+            #print("mask action: ", mask_action)
+            action = DDQN.select_action_with_masking(state, mask_action)
+            actions.append(action)
+            #print("action: ", action)
+            dummy +=1
+
+
 
 
         if None in actions:
             print("FAILED ACTION: ", actions)
             break
-        #print("state: ", state)
+        print("state: ", state)
         print("Actions:", actions)
         next_state, reward, done, truncated, info = env.step(actions)
         #print("Reward:", reward)
-        print("NEXT STATE:", next_state)
+        #print("NEXT STATE:", next_state)
         total_reward += reward
-        env.render()
+        #env.render()
         print()
         print("-" * 100)
         state = next_state
+
+
+    # print("state: ", state)
+    # print("mask action: ", mask_action)
+    # print("actions: ", actions)
+    # print("reward: ", reward)
     print("len(env.conveyor.product_completed)", len(env.conveyor.product_completed))
     print("Episode complete. Total Reward:", total_reward, "jumlah step:", env.step_count)
     order = {'A': 0, 'B': 1, 'C': 2}

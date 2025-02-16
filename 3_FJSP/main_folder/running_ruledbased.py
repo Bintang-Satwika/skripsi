@@ -1,4 +1,4 @@
-from env_5c_2 import FJSPEnv
+from env_5c_3 import FJSPEnv
 import numpy as np
 import random
 
@@ -75,7 +75,7 @@ def masking_action(states, env):
        
 
 if __name__ == "__main__":
-    env = FJSPEnv(window_size=3, num_agents=3, max_steps=500)
+    env = FJSPEnv(window_size=3, num_agents=3, max_steps=700)
     state, info = env.reset(seed=3)
     #nv.render()
     total_reward = 0

@@ -452,7 +452,7 @@ class FJSPEnv(gym.Env):
         reward_wait_all = self.reward_wait(actions, self.is_action_wait_succeed,factor_x=1)
         reward_working_all = self.reward_working(self.observation_all, self.is_status_working_succeed )
         reward_step_all = self.reward_complete()
-        reward_agent_all=-1.1+reward_wait_all+reward_working_all+reward_step_all
+        reward_agent_all=-0.5+reward_wait_all+reward_working_all+reward_step_all+0.5*self.reward_product_complete
         # print("reward_wait_all: ", reward_wait_all)
         # print("reward_working_all: ", reward_working_all)
         # print("reward_step_all: ", reward_step_all)
@@ -464,7 +464,7 @@ class FJSPEnv(gym.Env):
 
         return next_observation_all, reward_agent_all, done_step, truncated_step, info_step
     
-    def reward_wait(self, actions,  is_action_wait_succeed, factor_x, k_wait=0.5):
+    def reward_wait(self, actions,  is_action_wait_succeed, factor_x, k_wait=0.25):
         rewards=[]
         for i, agent in enumerate(self.agents):
             if actions[i]==1 or actions[i]==2 and is_action_wait_succeed[i]:
@@ -474,7 +474,7 @@ class FJSPEnv(gym.Env):
         return np.multiply(k_wait,rewards)
 
 
-    def reward_working(self, observations, is_status_working_succeed , k_working=1):
+    def reward_working(self, observations, is_status_working_succeed , k_working=0.4):
         rewards=[]
         for r, agent in enumerate(self.agents):
             obs=observations[r]
@@ -484,7 +484,7 @@ class FJSPEnv(gym.Env):
                 rewards.append(0)
         return np.multiply(k_working,rewards)
     
-    def reward_complete(self, k_complete=0.8):
+    def reward_complete(self, k_complete=0.4):
         value = k_complete*self.total_process_done
         self.total_process_done=0
         return value

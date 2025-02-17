@@ -4,7 +4,7 @@ import os
 import json
 import tensorflow as tf
 from tensorflow.keras import layers, models
-from env_testing_1 import FJSPEnv  
+from env_5c_4 import FJSPEnv  
 from MASKING_ACTION_MODEL import masking_action
 # Environment settings
 RENDER_MODE = None
@@ -30,17 +30,26 @@ class DDQN_model:
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.load_dir = load_dir
-
+        self.num_agents = 3
         self.dqn_network = self.create_dqn_network()
         self.target_dqn_network = self.create_dqn_network()
 
     def create_dqn_network(self):
-        # Dense network: input shape is (state_dim,)
-        state_input = layers.Input(shape=(self.state_dim,))
-        x = layers.Dense(64, activation="relu")(state_input)
-        x = layers.Dense(64, activation="relu")(x)
-        x = layers.Dense(64, activation="relu")(x)
-        output = layers.Dense(self.action_dim, activation='linear')(x)
+
+        state_input = layers.Input(shape=(self.num_agents, self.state_dim))
+        
+        # Apply Dense layers without activation and then apply LeakyReLU using TimeDistributed
+        x = layers.TimeDistributed(layers.Dense(64))(state_input)
+        x = layers.TimeDistributed(layers.LeakyReLU(alpha=0.01))(x)
+        
+        x = layers.TimeDistributed(layers.Dense(64))(x)
+        x = layers.TimeDistributed(layers.LeakyReLU(alpha=0.01))(x)
+        
+        x = layers.TimeDistributed(layers.Dense(64))(x)
+        x = layers.TimeDistributed(layers.LeakyReLU(alpha=0.01))(x)
+        
+        output = layers.TimeDistributed(layers.Dense(self.action_dim, activation='linear'))(x)
+        
         model = models.Model(inputs=state_input, outputs=output)
         return model
 
@@ -65,12 +74,19 @@ dqn_network, target_dqn_network = loader.load_models(episode=EPISODE_START)
 bias_output = dqn_network.layers[-1].get_weights()[-1]
 print("bias_output:", bias_output)
 
-def select_action_with_masking(state, action_mask):
-        state_tensor = tf.convert_to_tensor([state], dtype=tf.float32)  # shape: (1, state_dim)
-        q_values = dqn_network(state_tensor)  # shape: (1, action_dim)
-        action_mask_tensor = tf.convert_to_tensor(action_mask, dtype=tf.bool)
-        masked_q_values = tf.where(action_mask_tensor, q_values, tf.fill(tf.shape(q_values), -np.inf))
-        return int(tf.argmax(masked_q_values, axis=1)[0])
+def select_action_with_masking(state, action_mask_all):
+
+    # Add batch dimension: state becomes (1, num_agents, state_dim)
+    state_tensor = tf.convert_to_tensor([state], dtype=tf.float32)
+    q_values = dqn_network(state_tensor)  # shape (1, num_agents, action_dim)
+    q_values = q_values[0]  # shape (num_agents, action_dim)
+    action_mask_tensor = tf.convert_to_tensor(action_mask_all, dtype=tf.bool)
+    masked_q_values = tf.where(action_mask_tensor, q_values, tf.fill(tf.shape(q_values), -np.inf))
+
+    actions = tf.argmax(masked_q_values, axis=1)
+
+    return actions.numpy()
+
 
 # Running environment
 def run_env(num_episodes, render):
@@ -78,18 +94,18 @@ def run_env(num_episodes, render):
     num_episodes = 10
     rewards = {}
     makespan = {}
-    for episode in range(1, 10+1):
+    for episode in range(1, 50+1):
         state, info = env.reset(seed=1000+episode)
         episode_reward = 0
         done, truncated = False, False
         while not (done or truncated):
             mask_actions = masking_action(state, env)
-            joint_actions = []
-            for single_state, mask in zip(state, mask_actions):
-                action = select_action_with_masking(single_state, mask)
-                joint_actions.append(action)
-            
+
+
+            joint_actions = select_action_with_masking(state, mask_actions)
+                
             joint_actions = np.array(joint_actions)
+
             next_state, reward, done, truncated, info =  env.step(joint_actions)
             episode_reward +=  np.mean(reward)
             state = next_state
@@ -113,10 +129,10 @@ def run_env(num_episodes, render):
 
     # Save rewards to JSON
 
-    file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_DDQNall_2.json")
+    file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_ALL_env5c.json")
     with open(file_path, "w") as f:
         json.dump(rewards, f, indent=4)
-    file_path= os.path.join(CURRENT_DIR, "Testing_makespan_DDQNall_2.json")
+    file_path= os.path.join(CURRENT_DIR, "Testing_makespan_ALL_env5c.json")
     with open(file_path, "w") as f:
         json.dump(makespan, f, indent=4)
 

@@ -114,10 +114,10 @@ if __name__ == "__main__":
 
     env.close()
     print("rewards:", rewards)
-    file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_FCFS_2_seed.json")
+    file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_FCFS_2_seed_op.json")
     with open(file_path, "w") as f:
         json.dump(rewards, f, indent=4)
-    file_path= os.path.join(CURRENT_DIR, "Testing_makespan_FCFS_2_seed.json")
+    file_path= os.path.join(CURRENT_DIR, "Testing_makespan_FCFS_2_seed_op.json")
     with open(file_path, "w") as f:
         json.dump(makespan, f, indent=4)
 

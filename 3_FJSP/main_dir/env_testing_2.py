@@ -3,7 +3,7 @@ import random
 import math
 import gymnasium as gym
 from gymnasium import spaces
-from circular_conveyor_testing_2 import CircularConveyor
+from circular_conveyor_testing_3 import CircularConveyor
 from agent_3 import Agent
 '''
 1. Urutan update state-> move conveyor -> generate jobs -> update state Syrt

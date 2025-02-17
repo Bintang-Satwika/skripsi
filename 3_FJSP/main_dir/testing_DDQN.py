@@ -4,7 +4,7 @@ import os
 import json
 import tensorflow as tf
 from tensorflow.keras import layers, models
-from env_testing_1 import FJSPEnv  
+from env_testing_2 import FJSPEnv  
 from MASKING_ACTION_MODEL import masking_action
 # Environment settings
 RENDER_MODE = None
@@ -37,9 +37,12 @@ class DDQN_model:
     def create_dqn_network(self):
         # Dense network: input shape is (state_dim,)
         state_input = layers.Input(shape=(self.state_dim,))
-        x = layers.Dense(64, activation="relu")(state_input)
-        x = layers.Dense(64, activation="relu")(x)
-        x = layers.Dense(64, activation="relu")(x)
+        x = layers.Dense(64)(state_input)
+        x= layers.LeakyReLU(alpha=0.01)(x)
+        x = layers.Dense(64)(x)
+        x= layers.LeakyReLU(alpha=0.01)(x)
+        x = layers.Dense(64)(x)
+        x= layers.LeakyReLU(alpha=0.01)(x)
         output = layers.Dense(self.action_dim, activation='linear')(x)
         model = models.Model(inputs=state_input, outputs=output)
         return model
@@ -113,10 +116,10 @@ def run_env(num_episodes, render):
 
     # Save rewards to JSON
 
-    file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_DDQNall_2.json")
+    file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_single_seed_op.json")
     with open(file_path, "w") as f:
         json.dump(rewards, f, indent=4)
-    file_path= os.path.join(CURRENT_DIR, "Testing_makespan_DDQNall_2.json")
+    file_path= os.path.join(CURRENT_DIR, "Testing_makespan_single_seed_op.json")
     with open(file_path, "w") as f:
         json.dump(makespan, f, indent=4)
 

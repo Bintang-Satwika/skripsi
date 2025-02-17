@@ -1,3 +1,0 @@
-epsilon di update setiap step, bukan setiap episode
-activation ReLu
-batch size 256

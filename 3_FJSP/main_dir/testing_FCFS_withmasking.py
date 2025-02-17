@@ -1,4 +1,4 @@
-from env_5c_4 import FJSPEnv
+from env_testing_2 import FJSPEnv
 import numpy as np
 import random
 from tqdm import tqdm
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     env = FJSPEnv(window_size=3, num_agents=3, max_steps=1000)
     rewards = {}
     makespan = {}
-    for episode in range(1, 1+50):
+    for episode in range(1, 50+1):
         print("\nepisode:", episode)
         state, info = env.reset(seed=1000+episode)
         reward_satu_episode = 0
@@ -107,17 +107,17 @@ if __name__ == "__main__":
         rewards[episode] = reward_satu_episode
         makespan[episode] = env.step_count
         
-
+        print("env.conveyor.product_completed:", env.conveyor.product_completed)
         print("Episode complete. Total Reward:", reward_satu_episode, "jumlah step:", env.step_count)
         order = {'A': 0, 'B': 1, 'C': 2}
 
 
     env.close()
     print("rewards:", rewards)
-    file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_FCFS_env5c.json")
+    file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_FCFS_2_seed.json")
     with open(file_path, "w") as f:
         json.dump(rewards, f, indent=4)
-    file_path= os.path.join(CURRENT_DIR, "Testing_makespan_FCFS_env5c.json")
+    file_path= os.path.join(CURRENT_DIR, "Testing_makespan_FCFS_2_seed.json")
     with open(file_path, "w") as f:
         json.dump(makespan, f, indent=4)
 

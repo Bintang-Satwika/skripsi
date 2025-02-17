@@ -4,7 +4,7 @@ import os
 import json
 import tensorflow as tf
 from tensorflow.keras import layers, models
-from env_5c_4 import FJSPEnv  
+from env_testing_2 import FJSPEnv  
 from MASKING_ACTION_MODEL import masking_action
 # Environment settings
 RENDER_MODE = None
@@ -129,10 +129,10 @@ def run_env(num_episodes, render):
 
     # Save rewards to JSON
 
-    file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_ALL_env5c.json")
+    file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_ALL_2_seed.json")
     with open(file_path, "w") as f:
         json.dump(rewards, f, indent=4)
-    file_path= os.path.join(CURRENT_DIR, "Testing_makespan_ALL_env5c.json")
+    file_path= os.path.join(CURRENT_DIR, "Testing_makespan_ALL_2_seed.json")
     with open(file_path, "w") as f:
         json.dump(makespan, f, indent=4)
 

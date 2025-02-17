@@ -468,18 +468,18 @@ class FJSPEnv(gym.Env):
             
             if (actions[i]==1 or actions[i]==2) and is_action_wait_succeed[i]:
                 if actions[i]==1:
-                    factor_x=2
+                    factor_x=2.0
                 elif actions[i]==2:
-                    factor_x=3
+                    factor_x=3.0
                 else:
                     print("FAILED ACTION: actions is not 1 or 2")
-                rewards.append(agent.speed/sum(factor_x*self.agent_speeds))
+                rewards.append(agent.speed/sum(np.multiply(factor_x,self.agent_speeds)))
             else:
                 rewards.append(0)
         return np.multiply(k_wait,rewards)
 
 
-    def reward_working(self, observations, is_status_working_succeed , k_working=3):
+    def reward_working(self, observations, is_status_working_succeed , k_working=3.0):
         rewards=[]
         for r, agent in enumerate(self.agents):
             obs=observations[r]

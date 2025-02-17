@@ -6,7 +6,7 @@ from MASKING_ACTION_MODEL import masking_action
 
 if __name__ == "__main__":
     env = FJSPEnv(window_size=3, num_agents=3, max_steps=600)
-    for episode in tqdm(range(1, 1+ 1000)):
+    for episode in tqdm(range(1, 1+ 10)):
         print("\nepisode:", episode)
         state, info = env.reset(seed=episode)
         reward_satu_episode = 0
@@ -34,7 +34,7 @@ if __name__ == "__main__":
                 break
 
             next_state, reward, done, truncated, info = env.step(actions)
-            reward_satu_episode += reward
+            reward_satu_episode += np.mean(reward)
             if env.FAILED_ACTION:
                 print("episode:", episode)
                 print("state:\n", state)

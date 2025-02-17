@@ -1,8 +1,18 @@
-from env_5c_4_sekuensial import FJSPEnv
+from env_5c_4 import FJSPEnv
 import numpy as np
 import random
 from tqdm import tqdm
 from MASKING_ACTION_MODEL import masking_action
+import json
+import os
+# Model directory
+# Get the current directory
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Get the parent directory of the current directory
+PARENT_DIR = os.path.dirname(CURRENT_DIR)
+MODEL_DIR = os.path.join(PARENT_DIR,'main_dir', "saved_5")
+
 def FCFS_action(states):
     actions=[]
     for i, state in enumerate(states):
@@ -42,7 +52,9 @@ def FCFS_action(states):
 
 if __name__ == "__main__":
     env = FJSPEnv(window_size=3, num_agents=3, max_steps=1000)
-    for episode in tqdm(range(1, 1+ 10)):
+    rewards = {}
+    makespan = {}
+    for episode in range(1, 1+100):
         print("\nepisode:", episode)
         state, info = env.reset(seed=1000+episode)
         reward_satu_episode = 0
@@ -88,14 +100,26 @@ if __name__ == "__main__":
                 break
             state = next_state
             #print("next_state:", next_state)
-        if  None in actions:
-            break
+
+        # if  None in actions:
+        #     break
+
+        rewards[episode] = reward_satu_episode
+        makespan[episode] = env.step_count
+        
+
         print("Episode complete. Total Reward:", reward_satu_episode, "jumlah step:", env.step_count)
         order = {'A': 0, 'B': 1, 'C': 2}
 
-        # Sorting by product type first, then by numeric value
-        #print("product completed: ",env.conveyor.product_completed)
-        sorted_jobs = sorted(env.conveyor.product_completed, key=lambda x: (order[x[0]], int(x[2:])))
+
+    env.close()
+    # print("rewards:", rewards)
+    # file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_FCFS_1.json")
+    # with open(file_path, "w") as f:
+    #     json.dump(rewards, f, indent=4)
+    # file_path= os.path.join(CURRENT_DIR, "Testing_makespan_FCFS_1.json")
+    # with open(file_path, "w") as f:
+    #     json.dump(makespan, f, indent=4)
 
         #print("product sorted: ",sorted_jobs)
     print("selesai")

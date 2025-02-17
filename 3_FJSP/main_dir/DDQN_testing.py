@@ -4,7 +4,7 @@ import os
 import json
 import tensorflow as tf
 from tensorflow.keras import layers, models
-from env_5c_4_sekuensial import FJSPEnv  
+from env_5c_4 import FJSPEnv  
 from MASKING_ACTION_MODEL import masking_action
 # Environment settings
 RENDER_MODE = None
@@ -75,7 +75,8 @@ def run_env(num_episodes, render):
     env = FJSPEnv(window_size=3, num_agents=3, max_steps=1000)
     num_episodes = 10
     rewards = {}
-    for episode in range(1, num_episodes + 1):
+    makespan = {}
+    for episode in range(1, 100+1):
         state, info = env.reset(seed=1000+episode)
         episode_reward = 0
         done, truncated = False, False
@@ -102,15 +103,20 @@ def run_env(num_episodes, render):
 
 
         rewards[episode] = episode_reward
+        makespan[episode] = env.step_count
+
         print(f"Episode {episode}, Total Reward = {episode_reward:.2f}", "jumlah step:", env.step_count)
 
     env.close()
 
     # Save rewards to JSON
 
-    file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_DDQN_1.json")
-    with open(file_path, "w") as f:
-        json.dump(rewards, f, indent=4)
+    # file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_DDQN_xx.json")
+    # with open(file_path, "w") as f:
+    #     json.dump(rewards, f, indent=4)
+    # file_path= os.path.join(CURRENT_DIR, "Testing_makespan_DDQN_xx.json")
+    # with open(file_path, "w") as f:
+    #     json.dump(makespan, f, indent=4)
 
     return rewards
 

@@ -4,10 +4,9 @@ import os
 import json
 import tensorflow as tf
 from tensorflow.keras import layers, models
-from env_5c_4 import FJSPEnv  
+from env_5c_4_sekuensial import FJSPEnv  
 from MASKING_ACTION_MODEL import masking_action
 # Environment settings
-ENV_NAME = "LunarLander-v3"
 RENDER_MODE = None
 EPISODE_START = 500
 
@@ -21,7 +20,7 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Get the parent directory of the current directory
 PARENT_DIR = os.path.dirname(CURRENT_DIR)
-MODEL_DIR = os.path.join(PARENT_DIR,'main_dir', "saved_3")
+MODEL_DIR = os.path.join(PARENT_DIR,'main_dir', "saved_5")
 
 
 class DDQN_model:

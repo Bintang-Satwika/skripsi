@@ -1,4 +1,4 @@
-from env_5c_4 import FJSPEnv
+from env_5c_4_sekuensial import FJSPEnv
 import numpy as np
 import random
 from tqdm import tqdm

@@ -31,6 +31,7 @@ class DDQN_model:
         self.dqn_network= self.create_dqn_network()
         self.target_dqn_network =self.create_dqn_network()
         self.target_dqn_network.set_weights(self.dqn_network.get_weights())
+        self.update_target_weights()
         # Optimizer
         self.dqn_optimizer = tf.keras.optimizers.Adam(learning_rate=self.lr)
         self.memory_B = deque(maxlen=int(buffer_length))
@@ -105,6 +106,12 @@ class DDQN_model:
         mb_rewards = tf.convert_to_tensor(np.stack([data[2] for data in minibatch]), dtype=tf.float32)
         mb_next_states = tf.convert_to_tensor(np.stack([data[3] for data in minibatch]), dtype=tf.float32)
         mb_dones = tf.convert_to_tensor(np.stack([data[4] for data in minibatch]), dtype=tf.float32)
+        # Reshape the multi-agent data to flatten the batch dimension
+        mb_states = tf.reshape(mb_states, (-1, self.state_dim))
+        mb_actions = tf.reshape(mb_actions, (-1,))
+        mb_rewards = tf.reshape(mb_rewards, (-1,))
+        mb_next_states = tf.reshape(mb_next_states, (-1, self.state_dim))
+        mb_dones = tf.reshape(mb_dones, (-1,))
 
         return mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones
     
@@ -148,12 +155,13 @@ class DDQN_model:
         # tf.print("mb_actions: ", mb_actions)
         # tf.print("tf.one_hot(mb_actions, self.action_dim): ", tf.one_hot(mb_actions, self.action_dim))
         with tf.GradientTape() as tape:
+            mb_Q_values_next= self.dqn_network(mb_next_states, training=False)
+            mb_actions_next = tf.argmax(mb_Q_values_next, axis=1)
+
             mb_Q_values= self.dqn_network(mb_states, training=True)
             mb_Q_values = tf.reduce_sum(mb_Q_values * tf.one_hot(mb_actions, self.action_dim), 
                                         axis=1)
 
-            mb_Q_values_next= self.dqn_network(mb_next_states, training=False)
-            mb_actions_next = tf.argmax(mb_Q_values_next, axis=1)
 
             #mb_target_Q_values_next = self.target_dqn_network(mb_next_states, training=False)[mb_actions_next]
         
@@ -288,15 +296,17 @@ if __name__ == "__main__":
                 break
             done_buffer = np.array([done or truncated]*env.num_agents)
 
-            DDQN.update_RL_memory(state, actions, reward, next_state, done_buffer)
+            if  np.array_equal(state, next_state):
+                print("State is not equal")
+                DDQN.update_RL_memory(state, actions, reward, next_state, done_buffer)
             if len(DDQN.memory_B) >= DDQN.batch_size:
 
                 mb_states, mb_actions, mb_rewards, mb_next_states, mb_dones = DDQN.take_RL_minibatch()
-                print("States batch shape:", mb_states.shape)
-                print("Actions batch shape:", mb_actions.shape)
-                print("Rewards batch shape:", mb_rewards.shape)
-                print("Next States batch shape:", mb_next_states.shape)
-                print("Dones batch shape:", mb_dones.shape)
+                # print("States batch shape:", mb_states.shape)
+                # print("Actions batch shape:", mb_actions.shape)
+                # print("Rewards batch shape:", mb_rewards.shape)
+                # print("Next States batch shape:", mb_next_states.shape)
+                # print("Dones batch shape:", mb_dones.shape)
                 print("\n")
             #DDQN.train_double_dqn()
             reward_satu_episode += reward

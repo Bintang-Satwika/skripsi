@@ -47,7 +47,6 @@ def masking_action(states, env):
             if is_status_idle and is_pick_job_window_yr_1 and is_job_in_capability_yr:
                 accept_action=True
                 decline_action=True
-                continue_action=True
 
             if is_status_idle and is_job_in_capability_yr_2:
                 wait_yr_2_action=True
@@ -56,10 +55,12 @@ def masking_action(states, env):
             if is_status_idle and is_job_in_capability_yr_1:
                 wait_yr_1_action=True
                 decline_action=True
+            if is_status_idle and (not is_job_in_capability_yr or not is_job_in_capability_yr_1 or not is_job_in_capability_yr_2):
+                decline_action=True
             
-            # if not is_job_in_capability_yr and not is_job_in_capability_yr_1 and not is_job_in_capability_yr_2:
-            #     continue_action=True
-            continue_action=True
+            if is_status_idle and (state[env.state_first_job_operation_location[0]]==0 and state[env.state_first_job_operation_location[1]]==0 and state[env.state_first_job_operation_location[2]]==0):
+                continue_action=True
+
 
 
         elif is_agent_working:
@@ -67,15 +68,14 @@ def masking_action(states, env):
                 continue_action=True
 
         mask_actions.append([accept_action, wait_yr_1_action, wait_yr_2_action, decline_action, continue_action])
+        #print("mask_actions:", mask_actions)
     return mask_actions
 
-        
-
-       
 
 if __name__ == "__main__":
     env = FJSPEnv(window_size=3, num_agents=3, max_steps=600)
     for episode in tqdm(range(1, 1+ 1000)):
+        print("\nepisode:", episode)
         state, info = env.reset(seed=episode)
         reward_satu_episode = 0
         done = False
@@ -115,12 +115,12 @@ if __name__ == "__main__":
             state = next_state
             #print("next_state:", next_state)
 
-        #print("Episode complete. Total Reward:", reward_satu_episode, "jumlah step:", env.step_count)
-        # order = {'A': 0, 'B': 1, 'C': 2}
+        print("Episode complete. Total Reward:", reward_satu_episode, "jumlah step:", env.step_count)
+        order = {'A': 0, 'B': 1, 'C': 2}
 
-        # # Sorting by product type first, then by numeric value
-        # print("product completed: ",env.conveyor.product_completed)
-        # sorted_jobs = sorted(env.conveyor.product_completed, key=lambda x: (order[x[0]], int(x[2:])))
+        # Sorting by product type first, then by numeric value
+        print("product completed: ",env.conveyor.product_completed)
+        sorted_jobs = sorted(env.conveyor.product_completed, key=lambda x: (order[x[0]], int(x[2:])))
 
-        # print("product sorted: ",sorted_jobs)
+        #print("product sorted: ",sorted_jobs)
     print("selesai")

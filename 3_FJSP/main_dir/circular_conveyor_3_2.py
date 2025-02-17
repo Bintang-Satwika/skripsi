@@ -63,9 +63,10 @@ class CircularConveyor:
             self.conveyor[0] = self.buffer_jobs.pop(0)
 
     def generate_jobs(self):
-            """Generates new jobs based on a Poisson process (if below maximum capacity)."""
+        """Generates new jobs based on a Poisson process (if below maximum capacity)."""
+        if self.sum_n_jobs < self.n_jobs:
             self.iteration += 1
-            if self.iteration % 3 == 0:
+            if self.iteration % 5 == 0:
                 new_job =1
             else:
                 new_job =0

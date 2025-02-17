@@ -27,13 +27,14 @@ class FJSPEnv(gym.Env):
         self.is_job_moving_to_workbench=[False]*num_agents
         self.product_return_to_conveyor=[None]*num_agents
         self.total_process_done=0
+        self.reward_product_complete=0
         
 
         # Parameter Conveyor
         self.num_sections = 12
         self.max_capacity = 0.75
         self.arrival_rate = 0.4
-        self.n_jobs = 20
+        self.n_jobs = 21
 
         #self.conveyor = CircularConveyor(self.num_sections, self.max_capacity, self.arrival_rate, num_agents, n_jobs=self.n_jobs)
 
@@ -57,7 +58,7 @@ class FJSPEnv(gym.Env):
         #---------------------------------------------------------------------
         self.agent_many_operations= 2
         self.agent_speeds = [1, 2, 3]  # Agent2 2x lebih cepat; Agent3 3x lebih cepat
-        self.base_processing_times = [6, 10, 12]  #  waktu dasar untuk setiap operasi
+        self.base_processing_times = [30, 25, 20]  #  waktu dasar untuk setiap operasi
         
         self.agents = []
 
@@ -376,6 +377,7 @@ class FJSPEnv(gym.Env):
                         agent.workbench={}
                         observation[status_location]=0
                         observation[self.state_operation_now_location]=0
+                        self.reward_product_complete+=1
                         #print("self.conveyor.job_details: ", self.conveyor.job_details)
                         #print("agent.workbench after: ", agent.workbench)
                     if agent.workbench:
@@ -438,7 +440,10 @@ class FJSPEnv(gym.Env):
           3: DECLINE menolak job di yr position dan tidak menunggu yr-1 hingga yr-window_size+1
           4: CONTINUE default jika sedang memproses/tidak ada job
         """
-        
+        self.is_action_wait_succeed=[False]*self.num_agents
+        self.is_status_working_succeed=[False]*self.num_agents
+        self.reward_product_complete=0
+        self.total_process_done=0
         self.step_count += 1
 
 
@@ -447,7 +452,7 @@ class FJSPEnv(gym.Env):
         reward_wait_all = self.reward_wait(actions, self.is_action_wait_succeed,factor_x=1)
         reward_working_all = self.reward_working(self.observation_all, self.is_status_working_succeed )
         reward_step_all = self.reward_complete()
-        reward_agent_all=-1+reward_wait_all+reward_working_all+reward_step_all
+        reward_agent_all=-1.1+reward_wait_all+reward_working_all+reward_step_all
         # print("reward_wait_all: ", reward_wait_all)
         # print("reward_working_all: ", reward_working_all)
         # print("reward_step_all: ", reward_step_all)
@@ -486,14 +491,14 @@ class FJSPEnv(gym.Env):
 
     def render(self):
        # print(f"Time Step: {self.step_count}")
-        print("\nNEXT STATE RENDER:")
-        for a, agent in enumerate(self.agents):
-            #print("self.conveyor.job_details:, ", self.conveyor.job_details)
-            print(f"Status Agent {agent.id} at position {int(self.observation_all[a][0])}: {int(self.observation_all[a][self.state_status_location_all[a]]) }")
-            print("window product: ", agent.window_product, "\nworkbench: ", agent.workbench)
-            if agent.processing_time_remaining>0:
-                print("agent.processing_time_remaining: ", agent.processing_time_remaining)
-            print("\n")
+        # print("\nNEXT STATE RENDER:")
+        # for a, agent in enumerate(self.agents):
+        #     #print("self.conveyor.job_details:, ", self.conveyor.job_details)
+        #     print(f"Status Agent {agent.id} at position {int(self.observation_all[a][0])}: {int(self.observation_all[a][self.state_status_location_all[a]]) }")
+        #     print("window product: ", agent.window_product, "\nworkbench: ", agent.workbench)
+        #     if agent.processing_time_remaining>0:
+        #         print("agent.processing_time_remaining: ", agent.processing_time_remaining)
+        #     print("\n")
         self.conveyor.display()
         #print("-" * 50)
 

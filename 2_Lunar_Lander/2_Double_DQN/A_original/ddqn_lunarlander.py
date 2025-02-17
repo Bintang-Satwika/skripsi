@@ -41,7 +41,7 @@ class TD3Agent:
         """
 
         # Direktori untuk menyimpan model dan buffer
-        self.save_dir = 'double_dqn/lunar_lander_1'
+        self.save_dir = 'double_dqn/lunar_lander_dummy'
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
 

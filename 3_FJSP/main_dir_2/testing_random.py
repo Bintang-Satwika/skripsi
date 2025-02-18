@@ -1,4 +1,4 @@
-from env_testing_2 import FJSPEnv
+from env_1 import FJSPEnv
 import numpy as np
 import random
 from tqdm import tqdm

@@ -479,7 +479,7 @@ class FJSPEnv(gym.Env):
 
         return next_observation_all, reward_agent_all, done_step, truncated_step, info_step
     
-    def reward_wait(self, actions,  is_action_wait_succeed,k_wait=0.5):
+    def reward_wait(self, actions,  is_action_wait_succeed,k_wait=1):
         rewards=[]
         for i, agent in enumerate(self.agents):
             
@@ -496,17 +496,17 @@ class FJSPEnv(gym.Env):
         return np.multiply(k_wait,rewards)
 
 
-    def reward_working(self, observations, is_status_working_succeed , k_working=1):
+    def reward_working(self, observations, is_status_working_succeed , k_working=4):
         rewards=[]
         for r, agent in enumerate(self.agents):
             obs=observations[r]
-            if obs[self.state_status_location_all[r]]==2 and is_status_working_succeed[r]:
-                rewards.append(agent.speed/sum(self.agent_speeds))
+            if obs[self.state_status_location_all[r]]==2:
+                rewards.append(float(agent.speed)/float(sum(self.agent_speeds)))
             else:
                 rewards.append(0)
         return np.multiply(k_working,rewards)
     
-    def reward_complete(self, k_complete=5):
+    def reward_complete(self, k_complete=4):
         value = k_complete*self.total_process_done
         self.total_process_done=0
         return value

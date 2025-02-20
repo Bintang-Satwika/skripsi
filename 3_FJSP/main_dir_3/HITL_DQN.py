@@ -25,7 +25,7 @@ class DDQN_model:
                  gamma=0.98,
                  save_every_episode=20):
         self.current_dir = os.path.dirname(os.path.abspath(__file__))
-        self.save_dir = os.path.join(self.current_dir, 'hitl_1')
+        self.save_dir = os.path.join(self.current_dir, 'model_HITL_1')
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
         self.num_agents = 3
@@ -45,7 +45,9 @@ class DDQN_model:
         self.count_ask_human = {}
         self.human_help = False
         self.Quen = deque(maxlen=10)
-        #self.reward_max = 40
+        self.th=2
+        self.reward_max = 100
+        self.episode_hitl = 60
 
         # Create Dense networks (shared among agents).
         self.dqn_network = self.create_dqn_network()
@@ -131,7 +133,7 @@ class DDQN_model:
             target_var.assign(self.tau * main_var + (1.0 - self.tau) * target_var)
 
 
-    def human_in_the_loop(self, state, action, reward_satu_episode, env):
+    def human_in_the_loop(self, state, action, reward_satu_episode, env, episode):
         """
         Memeriksa apakah perlu human-in-the-loop, lalu ambil aksi human jika perlu.
         """
@@ -140,19 +142,9 @@ class DDQN_model:
 
         # Jika perlu bantuan manusia
         if self.human_help:
-            try:
-                self.count_ask_human[self.count_episode] += 1
-            except:
-                self.count_ask_human[self.count_episode] = 1
-
             action_human = HITL_action(state, env)
 
         else:
-            try:
-                self.count_ask_human[self.count_episode] += 0
-            except:
-                self.count_ask_human[self.count_episode] = 0
-            
             action_human = None
 
         return action_human
@@ -164,20 +156,18 @@ class DDQN_model:
         Berdasarkan selisih Q1-Q2 dan reward episode.
         """
         #print("action: ", action)
-        #action = tf.reshape(action, (-1, self.action_dim))
-        state = tf.reshape(state, (-1, self.state_dim))
+        state = tf.reshape(state, (1, 3,self.state_dim))
 
-        Q1_actual = self.dqn_network(state, training=True)
+        Q1_actual = self.dqn_network(state, training=False)
         Q1_actual  = tf.reduce_sum(Q1_actual * 
-                                   tf.one_hot(action, self.action_dim), 
-                                        axis=2)
+                                   tf.one_hot(action, self.action_dim))
        
 
         Q2_actual = self.target_dqn_network(state, training=False)
         Q2_actual = tf.reduce_sum(
-                    Q2_actual * tf.one_hot(action, self.action_dim), axis=2)
+                    Q2_actual * tf.one_hot(action, self.action_dim))
 
-        Is = Q1_actual - Q2_actual
+        Is = float(Q1_actual - Q2_actual)
 
         # Jika Q1 - Q2 lebih besar dari max di self.Quen & reward masih di bawah threshold => human_help
         if len(self.Quen) > 0:
@@ -206,7 +196,7 @@ class DDQN_model:
 
     def update_human_memory(self, state, action, reward, next_state, done):
         """Simpan (s, a) dari aksi manusia ke buffer terpisah."""
-        self.memory_B_human.append((state, action, reward, next_state, done))
+        self.replay_buffer_human.append((state, action, reward, next_state, done))
 
     def update_RL_memory(self, state, action, reward, next_state, done):
         """Simpan (s, a, r, s', done) ke buffer RL."""
@@ -307,6 +297,7 @@ if __name__ == "__main__":
         reward_episode = 0
         done = False
         truncated = False
+        human_actions=None
         print("\nEpisode:", episode)
 
         # For joint transitions, we initialize a single episode buffer.
@@ -320,13 +311,18 @@ if __name__ == "__main__":
                 print("Max steps reached.")
                 break
 
-            mask_actions = MASKING_action(state, env)
+            if episode < DDQN.episode_hitl:
+                mask_actions = MASKING_action(state, env)
 
-            joint_actions= DDQN.select_action_with_masking(state, mask_actions)
-                
-            joint_actions= np.array(joint_actions)
-            human_actions = DDQN.human_in_the_loop(state, joint_actions, reward_episode)
-            joint_actions = human_actions if human_actions is not None else joint_actions
+                joint_actions= DDQN.select_action_with_masking(state, mask_actions)
+                    
+                joint_actions= np.array(joint_actions)
+                human_actions = DDQN.human_in_the_loop(state, joint_actions, reward_episode,env, episode)
+                joint_actions = human_actions if human_actions is not None else joint_actions
+            else:
+                mask_actions = MASKING_action(state, env)
+                joint_actions= DDQN.select_action_with_masking(state, mask_actions)
+                human_actions = None
 
             if None in joint_actions:
                 print("FAILED ACTION: ", joint_actions)
@@ -343,8 +339,17 @@ if __name__ == "__main__":
 
             if not np.array_equal(next_state, state):
                 if human_actions is not None:
+                    try:
+                        DDQN.count_ask_human[episode] += 1
+                    except:
+                        DDQN.count_ask_human[episode] = 1
+
                     DDQN.update_human_memory(state, human_actions, reward, next_state, np.repeat(done, num_agents))
                 else:
+                    try:
+                        DDQN.count_ask_human[episode] += 0
+                    except:
+                        DDQN.count_ask_human[episode] = 0
                     DDQN.update_RL_memory(state, joint_actions, reward, next_state, np.repeat(done, num_agents))
 
             if len(DDQN.replay_buffer) >= DDQN.batch_size:

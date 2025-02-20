@@ -1,4 +1,4 @@
-from env_1 import FJSPEnv
+from env_2 import FJSPEnv
 import numpy as np
 import random
 from tqdm import tqdm
@@ -33,7 +33,7 @@ if __name__ == "__main__":
                 print("All jobs are completed.")
                 break
 
-            actions=HITL_action(state, env)
+            actions, masking=HITL_action(state, env)
             #actions=FCFS_action(state, env)
             #print("actions:", actions)
 
@@ -44,6 +44,7 @@ if __name__ == "__main__":
 
 
             next_state, reward, done, truncated, info = env.step(actions)
+            #env.render()
             reward = np.mean(reward)
             reward_satu_episode += reward
             
@@ -74,10 +75,10 @@ if __name__ == "__main__":
     print("rewards:", rewards)
     print("makespan:", makespan)
 
-    file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_H_zzz.json")
-    with open(file_path, "w") as f:
-        json.dump(rewards, f, indent=4)
-    file_path= os.path.join(CURRENT_DIR, "Testing_makespan_H_zzz.json")
+    # file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_H_3.json")
+    # with open(file_path, "w") as f:
+    #     json.dump(rewards, f, indent=4)
+    file_path= os.path.join(CURRENT_DIR, "Testing_makespan_H_env2.json")
     with open(file_path, "w") as f:
         json.dump(makespan, f, indent=4)
 

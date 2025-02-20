@@ -136,34 +136,69 @@ def FAA(states, env):
     
     # Check Agent 3 (fastest; index 2)
     if states[2, env.state_status_location_all[2]] == 0:
-        # Agent 3 is available and capable
-        if np.all(np.isin(job_op_3, states[2, env.state_operation_capability_location])):
-            fastest_agents_available[2,2] = True  
-        elif np.all(np.isin(job_op_2, states[2, env.state_operation_capability_location])):
-            fastest_agents_available[2,1] = True
-        elif np.all(np.isin(job_op_1, states[2, env.state_operation_capability_location])):
-            fastest_agents_available[2,0] = True
+        a= (states[2, env.state_first_job_operation_location[0]], 
+                states[2, env.state_second_job_operation_location[0]])
+        b= (states[2, env.state_first_job_operation_location[1]], 
+                states[2, env.state_second_job_operation_location[1]])
+        c= (states[2, env.state_first_job_operation_location[2]],
+                states[2, env.state_second_job_operation_location[2]])
+        if (np.all(np.isin(a, states[2, env.state_operation_capability_location]))
+            or np.all(np.isin(b, states[2, env.state_operation_capability_location]))
+            or np.all(np.isin(c, states[2, env.state_operation_capability_location]))
+            ):
+            pass
+        elif states[1, env.state_status_location_all[1]]  !=0 and states[0, env.state_status_location_all[1]] !=0:
+            pass
+        else:
+            # Agent 3 is available and capable
+            if np.all(np.isin(job_op_3, states[2, env.state_operation_capability_location])):
+                fastest_agents_available[2,2] = True  
+            elif np.all(np.isin(job_op_2, states[2, env.state_operation_capability_location])):
+                fastest_agents_available[2,1] = True
+            elif np.all(np.isin(job_op_1, states[2, env.state_operation_capability_location])):
+                fastest_agents_available[2,0] = True
 
     # Check Agent 2
     if states[1, env.state_status_location_all[1]] == 0:
-        # Agent 2 is available and capable
-        if np.all(np.isin(job_op_2, states[1, env.state_operation_capability_location])):
-            fastest_agents_available[1,1] = True
-        elif np.all(np.isin(job_op_1, states[1, env.state_operation_capability_location])):
-            fastest_agents_available[1,0] = True
-        elif np.all(np.isin(job_op_3, states[1, env.state_operation_capability_location])):
-            fastest_agents_available[1,2] = True
-    
-    if states[0, env.state_status_location_all[1]] == 0:
-        # Agent 1 is available and capable
-        if np.all(np.isin(job_op_1, states[0, env.state_operation_capability_location])):
-            fastest_agents_available[0,0] = True
-        elif np.all(np.isin(job_op_3, states[0, env.state_operation_capability_location])):
-            fastest_agents_available[0,2] = True
-        elif np.all(np.isin(job_op_2, states[0, env.state_operation_capability_location])):
-            fastest_agents_available[0,1] = True
-
-
+        a= (states[1, env.state_first_job_operation_location[0]], 
+                states[1, env.state_second_job_operation_location[0]])
+        b= (states[1, env.state_first_job_operation_location[1]], 
+                states[1, env.state_second_job_operation_location[1]])
+        c= (states[1, env.state_first_job_operation_location[2]],
+                states[1, env.state_second_job_operation_location[2]])
+        if (np.all(np.isin(a, states[1, env.state_operation_capability_location]))
+            or np.all(np.isin(b, states[1, env.state_operation_capability_location]))
+            or np.all(np.isin(c, states[1, env.state_operation_capability_location]))
+            ):
+            pass
+        else:
+            if np.all(np.isin(job_op_2, states[1, env.state_operation_capability_location])):
+                fastest_agents_available[1,1] = True
+            elif np.all(np.isin(job_op_1, states[1, env.state_operation_capability_location])):
+                fastest_agents_available[1,0] = True
+            elif np.all(np.isin(job_op_3, states[1, env.state_operation_capability_location])):
+                fastest_agents_available[1,2] = True
+    # check Agent 1
+    if states[0, env.state_status_location_all[0]] == 0:
+        a= (states[0, env.state_first_job_operation_location[0]], 
+                states[0, env.state_second_job_operation_location[0]])
+        b= (states[0, env.state_first_job_operation_location[1]], 
+                states[0, env.state_second_job_operation_location[1]])
+        c= (states[0, env.state_first_job_operation_location[2]],
+                states[0, env.state_second_job_operation_location[2]])
+        if (np.all(np.isin(a, states[0, env.state_operation_capability_location]))
+            or np.all(np.isin(b, states[0, env.state_operation_capability_location]))
+            or np.all(np.isin(c, states[0, env.state_operation_capability_location]))
+            ):
+            pass
+        else:
+            # Agent 1 is available and capable
+            if np.all(np.isin(job_op_1, states[0, env.state_operation_capability_location])):
+                fastest_agents_available[0,0] = True
+            elif np.all(np.isin(job_op_3, states[0, env.state_operation_capability_location])):
+                fastest_agents_available[0,2] = True
+            elif np.all(np.isin(job_op_2, states[0, env.state_operation_capability_location])):
+                fastest_agents_available[0,1] = True
 
     return fastest_agents_available
 
@@ -203,4 +238,4 @@ def HITL_action(states, env):
         actions.append(random_actions)
 
     actions = np.array(actions)
-    return actions
+    return actions, mask_actions

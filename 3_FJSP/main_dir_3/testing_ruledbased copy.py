@@ -1,4 +1,4 @@
-from env_1 import FJSPEnv
+from env_2 import FJSPEnv
 import numpy as np
 import random
 from tqdm import tqdm
@@ -81,10 +81,10 @@ if __name__ == "__main__":
     # with open(file_path, "w") as f:
     #     json.dump(makespan, f, indent=4)
 
-    file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_F_zzz.json")
-    with open(file_path, "w") as f:
-        json.dump(rewards, f, indent=4)
-    file_path= os.path.join(CURRENT_DIR, "Testing_makespan_F_zzz.json")
+    # file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_F_3.json")
+    # with open(file_path, "w") as f:
+    #     json.dump(rewards, f, indent=4)
+    file_path= os.path.join(CURRENT_DIR, "Testing_makespan_F_env2.json")
     with open(file_path, "w") as f:
         json.dump(makespan, f, indent=4)
 

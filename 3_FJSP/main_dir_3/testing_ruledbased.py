@@ -1,4 +1,4 @@
-from env_2 import FJSPEnv
+from env_1 import FJSPEnv
 import numpy as np
 import random
 from tqdm import tqdm
@@ -20,7 +20,7 @@ if __name__ == "__main__":
     env = FJSPEnv(window_size=3, num_agents=3, max_steps=1000)
     rewards = {}
     makespan = {}
-    for episode in range(1, 20+1):
+    for episode in range(1, 50+1):
         print("\nepisode:", episode)
         state, info = env.reset(seed=1000+episode)
         reward_satu_episode = 0
@@ -75,10 +75,10 @@ if __name__ == "__main__":
     print("rewards:", rewards)
     print("makespan:", makespan)
 
-    # file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_H_3.json")
-    # with open(file_path, "w") as f:
-    #     json.dump(rewards, f, indent=4)
-    file_path= os.path.join(CURRENT_DIR, "Testing_makespan_H_env2.json")
+    file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_H_env1_50ep.json")
+    with open(file_path, "w") as f:
+        json.dump(rewards, f, indent=4)
+    file_path= os.path.join(CURRENT_DIR, "Testing_makespan_H_env1_50ep.json")
     with open(file_path, "w") as f:
         json.dump(makespan, f, indent=4)
 

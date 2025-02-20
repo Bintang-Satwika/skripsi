@@ -20,7 +20,7 @@ if __name__ == "__main__":
     env = FJSPEnv(window_size=3, num_agents=3, max_steps=1000)
     rewards = {}
     makespan = {}
-    for episode in range(1, 20+1):
+    for episode in range(1, 50+1):
         print("\nepisode:", episode)
         state, info = env.reset(seed=1000+episode)
         reward_satu_episode = 0
@@ -74,19 +74,12 @@ if __name__ == "__main__":
     print("rewards:", rewards)
     print("makespan:", makespan)
 
-    # file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_H_zzz.json")
-    # with open(file_path, "w") as f:
-    #     json.dump(rewards, f, indent=4)
-    # file_path= os.path.join(CURRENT_DIR, "Testing_makespan_H_zzz.json")
-    # with open(file_path, "w") as f:
-    #     json.dump(makespan, f, indent=4)
+    file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_random_env1_50ep.json")
+    with open(file_path, "w") as f:
+        json.dump(rewards, f, indent=4)
+    file_path= os.path.join(CURRENT_DIR, "Testing_makespan_Random_env1_50ep.json")
+    with open(file_path, "w") as f:
+        json.dump(makespan, f, indent=4)
 
-    # file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_F_zzz.json")
-    # with open(file_path, "w") as f:
-    #     json.dump(rewards, f, indent=4)
-    # file_path= os.path.join(CURRENT_DIR, "Testing_makespan_F_zzz.json")
-    # with open(file_path, "w") as f:
-    #     json.dump(makespan, f, indent=4)
 
-        #print("product sorted: ",sorted_jobs)
     print("selesai")

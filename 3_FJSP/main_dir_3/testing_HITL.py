@@ -21,7 +21,7 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 # Get the parent directory of the current directory
 PARENT_DIR = os.path.dirname(CURRENT_DIR)
 print("PARENT_DIR:", PARENT_DIR)
-MODEL_DIR = os.path.join(PARENT_DIR,'main_dir_3', "model_RL_masking_1")
+MODEL_DIR = os.path.join(PARENT_DIR,'main_dir_3', "model_HITL_Masking_5_100ep_part2")
 print("MODEL_DIR:", MODEL_DIR)
 
 
@@ -94,7 +94,7 @@ def run_env(num_episodes, render):
     num_episodes = 10
     rewards = {}
     makespan = {}
-    for episode in range(1, 20+1):
+    for episode in range(1, 50+1):
         state, info = env.reset(seed=1000+episode)
         episode_reward = 0
         done, truncated = False, False
@@ -129,10 +129,10 @@ def run_env(num_episodes, render):
 
     # Save rewards to JSON
 
-    file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_RL_220.json")
+    file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_HITL_220_env1_50ep.json")
     with open(file_path, "w") as f:
         json.dump(rewards, f, indent=4)
-    file_path= os.path.join(CURRENT_DIR, "Testing_makespan_RL_220.json")
+    file_path= os.path.join(CURRENT_DIR, "Testing_makespan_HITL_220_env1_50ep.json")
     with open(file_path, "w") as f:
         json.dump(makespan, f, indent=4)
 

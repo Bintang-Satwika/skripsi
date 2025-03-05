@@ -91,11 +91,13 @@ def select_action_with_masking(state, action_mask_all):
 # Running environment
 def run_env(num_episodes, render):
     env = FJSPEnv(window_size=3, num_agents=3, max_steps=1000)
+    
     num_episodes = 10
     rewards = {}
     makespan = {}
-    for episode in range(1, 50+1):
+    for episode in range(1, 1+1):
         state, info = env.reset(seed=1000+episode)
+        print("state:", state)
         episode_reward = 0
         done, truncated = False, False
         while not (done or truncated):
@@ -127,14 +129,14 @@ def run_env(num_episodes, render):
 
     env.close()
 
-    # Save rewards to JSON
+    # # Save rewards to JSON
 
-    file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_HITL_220_env1_50ep.json")
-    with open(file_path, "w") as f:
-        json.dump(rewards, f, indent=4)
-    file_path= os.path.join(CURRENT_DIR, "Testing_makespan_HITL_220_env1_50ep.json")
-    with open(file_path, "w") as f:
-        json.dump(makespan, f, indent=4)
+    # file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_HITL_220_env1_50ep.json")
+    # with open(file_path, "w") as f:
+    #     json.dump(rewards, f, indent=4)
+    # file_path= os.path.join(CURRENT_DIR, "Testing_makespan_HITL_220_env1_50ep.json")
+    # with open(file_path, "w") as f:
+    #     json.dump(makespan, f, indent=4)
 
     return rewards
 

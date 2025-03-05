@@ -78,6 +78,7 @@ class CircularConveyor:
                 if not allowed_types:
                     # No product type is allowed (each has reached 7), so do nothing.
                     return
+                print("self.episode: ", self.episode)
                 random.seed(self.episode+self.iteration)
                 product_type = random.choice(allowed_types)
                 self.sum_n_jobs += 1

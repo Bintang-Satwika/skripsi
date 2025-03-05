@@ -46,7 +46,7 @@ class Agent:
             np.array([self.position]),
             np.array(self.operation_capability),
             np.array([self.operation_now]),
-            np.array(self.status_all),          # Perbaikan: tidak dibungkus list lagi
+            np.array(self.status_all),         
             np.array(self.first_product_operation),
             np.array(self.second_product_operation),
             np.array([self.pick_product_window])

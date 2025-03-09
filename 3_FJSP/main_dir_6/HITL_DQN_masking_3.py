@@ -46,7 +46,7 @@ class DDQN_model:
         self.human_help = False
         self.Quen = deque(maxlen=15)
         self.th=2
-        self.reward_max = 160
+        self.reward_max = 60
         self.episode_hitl = 1000
 
         self.episode_load= episode_load

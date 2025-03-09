@@ -26,7 +26,7 @@ class DDQN_model:
                  save_every_episode=20,
                  episode_load=0):
         self.current_dir = os.path.dirname(os.path.abspath(__file__))
-        self.save_dir = os.path.join(self.current_dir, 'model_HITL_Masking_11')
+        self.save_dir = os.path.join(self.current_dir, 'model_HITL_Masking_12')
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
         self.num_agents = 3
@@ -46,7 +46,7 @@ class DDQN_model:
         self.human_help = False
         self.Quen = deque(maxlen=15)
         self.th=2
-        self.reward_max = 60
+        self.reward_max = 100
         self.episode_hitl = 1000
 
         self.episode_load= episode_load

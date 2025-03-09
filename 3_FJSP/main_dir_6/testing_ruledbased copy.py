@@ -22,7 +22,7 @@ if __name__ == "__main__":
     makespan = {}
     energy= {}
     episode_seed=0
-    for episode in range(1, 10+1):
+    for episode in range(1, 20+1):
         print("\nepisode:", episode)
         state, info = env.reset(seed=1000+episode)
         if (episode-1) %1 == 0:
@@ -51,7 +51,8 @@ if __name__ == "__main__":
 
 
             next_state, reward, done, truncated, info = env.step(actions)
-            reward = np.mean(reward)
+            reward =np.mean(reward)
+            #reward= reward[0]
             reward_satu_episode += reward
             
             if env.FAILED_ACTION:

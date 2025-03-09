@@ -20,8 +20,9 @@ if __name__ == "__main__":
     env = FJSPEnv(window_size=3, num_agents=3, max_steps=1000, episode=1)
     rewards = {}
     makespan = {}
+    energy= {}
     episode_seed=0
-    for episode in range(1, 50+1):
+    for episode in range(1, 10+1):
         print("\nepisode:", episode)
         state, info = env.reset(seed=1000+episode)
         if (episode-1) %1 == 0:
@@ -71,6 +72,7 @@ if __name__ == "__main__":
 
         rewards[episode] = reward_satu_episode
         makespan[episode] = env.step_count
+        energy[episode] = sum(env.agents_energy_consumption)
         print("Episode complete. Total Reward:", reward_satu_episode, "jumlah step:", env.step_count, "total product completed:", len(env.conveyor.product_completed))
         order = {'A': 0, 'B': 1, 'C': 2}
 
@@ -79,12 +81,15 @@ if __name__ == "__main__":
     print("rewards:", rewards)
     print("makespan:", makespan)
 
-    file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_H.json")
+    file_path= os.path.join(CURRENT_DIR, "H_Testing_cumulative_rewards.json")
     with open(file_path, "w") as f:
         json.dump(rewards, f, indent=4)
-    file_path= os.path.join(CURRENT_DIR, "Testing_makespan_H.json")
+    file_path= os.path.join(CURRENT_DIR, "H_Testing_makespan.json")
     with open(file_path, "w") as f:
         json.dump(makespan, f, indent=4)
+    file_path= os.path.join(CURRENT_DIR, "H_Testing_energy.json")
+    with open(file_path, "w") as f:
+        json.dump(energy, f, indent=4)
 
     # file_path= os.path.join(CURRENT_DIR, "Testing_cumulative_rewards_F_zzz.json")
     # with open(file_path, "w") as f:

@@ -64,9 +64,10 @@ class FJSPEnv(gym.Env):
         # self.base_processing_times = [18,18,18]   #  waktu dasar untuk setiap operasi
         # self.base_processing_times = [60,60,60]   #  waktu dasar untuk setiap operasi
         # self.base_processing_times = [30,30,30]   #  waktu dasar untuk setiap operasi
-        self.base_processing_times = [24,18,12]   #  waktu dasar untuk setiap operasi
+        self.base_processing_times ={}
         
         self.agents = []
+        self.agents_energy_consumption=[0,0,0]   
 
         self.FAILED_ACTION = False
         # Ruang observasi: tiap agen memiliki state vektor berukuran 14
@@ -118,6 +119,7 @@ class FJSPEnv(gym.Env):
             # Reinitialize the conveyor and agents as needed
             self.conveyor = CircularConveyor(self.num_sections, self.max_capacity, self.arrival_rate, 
                                             self.num_agents, n_jobs=self.n_jobs, current_episode_count=self.episode_count)
+            self.base_processing_times = self.conveyor.base_processing_times
             self.agents = []
             for i in range(self.num_agents):
                 agent = Agent(
@@ -185,9 +187,15 @@ class FJSPEnv(gym.Env):
                     observation[self.state_first_job_operation_location[0]]=0
                     # state second job operation akan menjadi nol pada yr karena job  dipindah ke workbench
                     observation[self.state_second_job_operation_location[0]]=0
+                    
+                    dummy = list(agent.workbench.keys())[0].split("-")[0]
+                    # print("dummy", dummy)
+                    # print(" self.base_processing_times[dummy]", self.base_processing_times[dummy])
+                    # print("select_operation-1", select_operation-1)
+                    # print("self.base_processing_times[dummy][select_operation-1]", self.base_processing_times[dummy][select_operation-1])
 
                     # processing time agent akan mulai dihitung
-                    agent.processing_time_remaining = agent.processing_time(self.base_processing_times[select_operation-1])
+                    agent.processing_time_remaining =  agent.processing_time( self.base_processing_times[dummy][select_operation-1])
                     #print("agent.processing_time_remaining: ", agent.processing_time_remaining)
                 else:
                     print("FAILED ACTION: operation capability is False")
@@ -299,7 +307,7 @@ class FJSPEnv(gym.Env):
             self.is_status_working_succeed[i]=True
             if agent.processing_time_remaining > 0:
                 agent.processing_time_remaining -= 1
-                #print("agent.processing_time_remaining: ", agent.processing_time_remaining)
+                self.agents_energy_consumption[i]+=1 # energy consumption
             elif agent.processing_time_remaining == 0:
                 observation[status_location]= 3 # working menjadi completing
                 self.is_status_working_succeed[i]=False # operasi selesai dan agent tidak bekerja
@@ -467,7 +475,8 @@ class FJSPEnv(gym.Env):
         reward_wait_all = self.reward_wait(actions, self.is_action_wait_succeed)
         reward_working_all = self.reward_working(self.observation_all, self.is_status_working_succeed )
         reward_step_all = self.reward_complete()
-        reward_agent_all=-1+reward_wait_all+reward_working_all+reward_step_all
+        reward_energy_all = self.reward_energy(self.observation_all)
+        reward_agent_all=-0.5+reward_wait_all+reward_working_all+reward_step_all-reward_energy_all
         # print("reward_wait_all: ", reward_wait_all)
         # print("reward_working_all: ", reward_working_all)
         # print("reward_step_all: ", reward_step_all)
@@ -478,6 +487,16 @@ class FJSPEnv(gym.Env):
         info_step = {"actions": actions}
 
         return next_observation_all, reward_agent_all, done_step, truncated_step, info_step
+    
+
+    def reward_energy(self, observations, k_energy=2):
+        rewards=[]
+        for r, agent in enumerate(self.agents):
+            if  self.is_status_working_succeed[r]:
+                rewards.append(k_energy)
+            else:
+                rewards.append(0)
+        return rewards
     
     def reward_wait(self, actions,  is_action_wait_succeed,k_wait=1):
         rewards=[]
@@ -490,23 +509,23 @@ class FJSPEnv(gym.Env):
                     factor_x=3.0
                 else:
                     print("FAILED ACTION: actions is not 1 or 2")
-                rewards.append(agent.speed/sum(np.multiply(factor_x,self.agent_speeds)))
+                rewards.append(float(agent.speed)/np.multiply(factor_x, sum(self.agent_speeds)))
             else:
                 rewards.append(0)
         return np.multiply(k_wait,rewards)
 
 
-    def reward_working(self, observations, is_status_working_succeed , k_working=4):
+    def reward_working(self, observations, is_status_working_succeed , k_working=5):
         rewards=[]
         for r, agent in enumerate(self.agents):
-            obs=observations[r]
-            if obs[self.state_status_location_all[r]]==2:
-                rewards.append(float(agent.speed)/float(sum(self.agent_speeds)))
+           # obs=observations[r]
+            if self.is_status_working_succeed[r]:
+                rewards.append(float(agent.speed/sum(self.agent_speeds)))
             else:
                 rewards.append(0)
         return np.multiply(k_working,rewards)
     
-    def reward_complete(self, k_complete=4):
+    def reward_complete(self, k_complete=5):
         value = k_complete*self.total_process_done
         self.total_process_done=0
         return value

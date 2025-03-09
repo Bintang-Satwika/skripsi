@@ -17,9 +17,16 @@ class CircularConveyor:
         #   - Product B: operations 2, 3
         #   - Product C: operations 1, 2
         self.product_operations = {
-            "A": [1,2],
-            "B": [2,3],
-            "C": [1,3],
+            "A": [1,2,3],
+            "B": [1,2,3],
+            "C": [1,2,3],
+        }
+        dummy =[20,15,10]
+
+        self.base_processing_times = {
+            "A":[dummy[0], dummy[1], dummy[2]],
+            "B":[dummy[0]+10, dummy[1]+10, dummy[2]+10],
+            "C":[dummy[0]+15, dummy[1]+15, dummy[2]+15],
         }
         self.job_index = 0 
         self.job_sequence = list(self.total_jobs.keys())
@@ -30,8 +37,6 @@ class CircularConveyor:
         self.num_agents=num_agents
         self.iteration=0
         self.episode=current_episode_count
-
-        self.episode_seed =0
 
     def add_job(self, product_type: str):
         """Adds a new job (if capacity permits) with its product-specific operations."""
@@ -64,7 +69,7 @@ class CircularConveyor:
         """Generates new jobs based on a Poisson process (if below maximum capacity)."""
         if self.sum_n_jobs < self.n_jobs:
             self.iteration += 1
-            if self.iteration % 5 == 0:
+            if self.iteration % 10 == 0:
                 new_job = 1
             else:
                 new_job = 0
@@ -76,7 +81,7 @@ class CircularConveyor:
                     # No product type is allowed (each has reached 7), so do nothing.
                     return
     
-                random.seed(int(self.episode_seed+self.iteration))
+                random.seed(int(self.episode+self.iteration))
                 product_type = random.choice(allowed_types)
                 self.sum_n_jobs += 1
                 self.add_job(product_type)

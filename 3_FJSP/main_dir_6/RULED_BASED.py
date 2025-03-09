@@ -76,6 +76,7 @@ def RANDOM_action(states, env):
     for single, mask_action in zip(states, mask_actions):
         true_indices = np.where(mask_action)[0]
         random_actions = random.choice(true_indices)
+        #print("true_indices:", true_indices, "random_actions:", random_actions)
         actions.append(random_actions)
 
     actions = np.array(actions)

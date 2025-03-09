@@ -565,13 +565,14 @@ def FCFS_action(states):
 
 
 if __name__ == "__main__":
-    env = FJSPEnv(window_size=3, num_agents=3, max_steps=200)
+    env = FJSPEnv(window_size=3, num_agents=3, max_steps=20)
     state, info = env.reset(seed=3)
     #nv.render()
     total_reward = 0
     done = False
     truncated = False
     print("Initial state:", state)
+    iterasi=0
     while not done and not truncated:
         if len(env.conveyor.product_completed)>= env.n_jobs:
             print("All jobs are completed.")
@@ -590,9 +591,9 @@ if __name__ == "__main__":
         #print("state: ", state)
         print("Actions:", actions)
         next_state, reward, done, truncated, info = env.step(actions)
-        #print("Reward:", reward)
+        print("Reward:", reward)
         print("NEXT STATE:", next_state)
-        total_reward += reward
+        total_reward += np.mean(reward)
         env.render()
         print()
         print("-" * 100)

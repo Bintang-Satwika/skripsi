@@ -3,8 +3,8 @@ import random
 import math
 import gymnasium as gym
 from gymnasium import spaces
-from circular_conveyor_5 import CircularConveyor
-from agent_2 import Agent
+from circular_conveyor_4 import CircularConveyor
+from agent_1 import Agent
 '''
 1. Urutan update state-> move conveyor -> generate jobs -> update state Syrt
 2. sudah bisa mengembalikan barang dari workbench ke conveyor
@@ -33,8 +33,8 @@ class FJSPEnv(gym.Env):
 
         # Parameter Conveyor
         self.num_sections = 12
-        self.max_capacity = 0.5
-        self.arrival_rate = 0
+        self.max_capacity = 0.75
+        self.arrival_rate = 0.4
         self.n_jobs = 21
 
         #self.conveyor = CircularConveyor(self.num_sections, self.max_capacity, self.arrival_rate, num_agents, n_jobs=self.n_jobs)
@@ -58,7 +58,7 @@ class FJSPEnv(gym.Env):
         self.state_pick_job_window_location=13
         #---------------------------------------------------------------------
         self.agent_many_operations= 2
-        self.multi_agent_speed = [[1, 2.0, None], [None, 1, 2.0], [2.0,None,  1]] #
+        self.agent_speeds = [1.0, 1.0, 1.0]  # Agent2 1.5x lebih cepat; Agent3 2x lebih cepat
         # self.base_processing_times = [60, 52, 48]   #  waktu dasar untuk setiap operasi
         # self.base_processing_times = [36, 24, 30]   #  waktu dasar untuk setiap operasi
         # self.base_processing_times = [18,18,18]   #  waktu dasar untuk setiap operasi
@@ -126,7 +126,7 @@ class FJSPEnv(gym.Env):
                     agent_id=i+1,
                     position=self.agent_positions[i],
                     operation_capability=self.agent_operation_capability[i],
-                    speed=self.multi_agent_speed[i],
+                    speed=self.agent_speeds[i],
                     window_size=self.window_size,
                     num_agent=self.num_agents,
                 )
@@ -192,7 +192,7 @@ class FJSPEnv(gym.Env):
                     # print("select_operation-1", select_operation-1)
                     # print("self.base_processing_times[dummy][select_operation-1]", self.base_processing_times[dummy][select_operation-1])
                     # processing time agent akan mulai dihitung
-                    agent.processing_time_remaining =  agent.processing_time( self.base_processing_times[dummy][select_operation-1], select_operation-1)
+                    agent.processing_time_remaining =  agent.processing_time( self.base_processing_times[dummy][select_operation-1])
                     #print("agent.processing_time_remaining: ", agent.processing_time_remaining)
                 else:
                     print("FAILED ACTION: operation capability is False")
@@ -507,7 +507,7 @@ class FJSPEnv(gym.Env):
                     factor_x=3.0
                 else:
                     print("FAILED ACTION: actions is not 1 or 2")
-                rewards.append(float(agent.speed)/np.multiply(factor_x, sum(self.multi_agent_speed)))
+                rewards.append(float(agent.speed)/np.multiply(factor_x, sum(self.agent_speeds)))
             else:
                 rewards.append(0)
         return np.multiply(k_wait,rewards)
@@ -518,7 +518,7 @@ class FJSPEnv(gym.Env):
         for r, agent in enumerate(self.agents):
            # obs=observations[r]
             if self.is_status_working_succeed[r]:
-                rewards.append(float(agent.speed)/sum(self.multi_agent_speed)-k_energy)
+                rewards.append(float(agent.speed)/sum(self.agent_speeds)-k_energy)
             else:
                 rewards.append(0)
         return np.multiply(k_working,rewards)

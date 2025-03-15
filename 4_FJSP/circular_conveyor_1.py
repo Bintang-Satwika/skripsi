@@ -21,7 +21,7 @@ class CircularConveyor:
             "B": [1,2,3],
             "C": [1,2,3],
         }
-        dummy1 =[1,3,2]
+        dummy1 =[2,4,3]
         dummy2 =dummy1*2
         dummy3 = dummy1*3
 

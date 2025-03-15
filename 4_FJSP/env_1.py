@@ -54,11 +54,11 @@ class FJSPEnv(gym.Env):
         self.state_remaining_operation = list(range(6 + self.num_agents, 6 + self.num_agents + self.window_size))
         self.state_processing_time_remaining = list(range(6 + self.num_agents + self.window_size, 6 + self.num_agents + 2 * self.window_size))
 
-        # print("self.state_status_location_all: ", self.state_status_location_all)
-        # print("self.state_workbench_remaining_operation: ", self.state_workbench_remaining_operation)
-        # print("self.state_workbench_degree_of_completion: ", self.state_workbench_degree_of_completion)
-        # print("self.state_remaining_operation: ", self.state_remaining_operation)
-        # print("self.state_processing_time_remaining: ", self.state_processing_time_remaining)
+        print("self.state_status_location_all: ", self.state_status_location_all)
+        print("self.state_workbench_remaining_operation: ", self.state_workbench_remaining_operation)
+        print("self.state_workbench_degree_of_completion: ", self.state_workbench_degree_of_completion)
+        print("self.state_remaining_operation: ", self.state_remaining_operation)
+        print("self.state_processing_time_remaining: ", self.state_processing_time_remaining)
 
         #---------------------------------------------------------------------
         # Ruang observasi: tiap agen memiliki state vektor berukuran 14
@@ -160,8 +160,7 @@ class FJSPEnv(gym.Env):
 
             elif actions[i] == 0: # CONTINUE
                 observation, agent  = self.action_continue(observation, agent, i, status_location)
-      
-        
+    
             '''
             RETURN TO CONVEYOR
             1. cek :
@@ -175,7 +174,6 @@ class FJSPEnv(gym.Env):
                 
             self.agents[i]=agent
             next_observation_all[i]=observation
-
             #--------------------------------------------------------------------------------------------
                     
         next_observation_all=np.array(next_observation_all)
@@ -183,16 +181,17 @@ class FJSPEnv(gym.Env):
         self.conveyor.move_conveyor()
         self.conveyor.generate_jobs()
 
-        # for i, agent in enumerate(self.agents):
-        #     window_sections = [int(observation_all[i][0]) - r for r in range(0, self.window_size)]
-        #     agent.window_product=np.array(self.conveyor.conveyor)[window_sections]
-        #     # agent.window_product=np.array(self.conveyor.conveyor)[window_sections]
-        #     job_details_value= [(self.conveyor.job_details.get(self.conveyor.conveyor[job_window], [])) for job_window in window_sections]
-            
-        #     # remaining operation bergeser sesuai window size
-        #     for j, value in enumerate(job_details_value):
-        #         next_observation_all[i, self.state_first_job_operation_location[j]] = value[0] if len(value)>0 else 0
-        #         next_observation_all[i, self.state_second_job_operation_location[j]] = value[1] if len(value)>1 else 0
+        for i, agent in enumerate(self.agents):
+            window_sections = [int(observation_all[i][0]) - r for r in range(0, self.window_size)]
+            agent.window_product=np.array(self.conveyor.conveyor)[window_sections]
+            # agent.window_product=np.array(self.conveyor.conveyor)[window_sections]
+            job_details_value= [(self.conveyor.job_details.get(self.conveyor.conveyor[job_window], [])) for job_window in window_sections]
+            #print("agent-id: ", agent.id)
+            #print("job_details_value: ", job_details_value)
+            # remaining operation bergeser sesuai window size
+            for j, value in enumerate(job_details_value):
+                #print("value: ", value, "j: ", j)
+                next_observation_all[i, self.state_remaining_operation[j]] = len(value) if len(value)>0 else 0
 
 
         return next_observation_all
@@ -214,11 +213,6 @@ class FJSPEnv(gym.Env):
 
         next_observation_all= self.update_state(observation_all=self.observation_all, actions=actions)
 
-        # reward_wait_all = self.reward_wait(actions, self.is_action_wait_succeed)
-        # reward_working_all = self.reward_working(self.observation_all, self.is_status_working_succeed )
-        # reward_step_all = self.reward_complete()
-        # reward_accept_all = self.reward_accept(self.observation_all)
-        #reward_agent_all=-0.75+reward_wait_all+reward_working_all+reward_step_all+reward_accept_all
         reward_agent_all=[0]*self.num_agents
         done_step = self.step_count >= self.max_steps
         truncated_step = True if len(self.conveyor.product_completed)>= self.conveyor.n_jobs else False

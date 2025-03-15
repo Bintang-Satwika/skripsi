@@ -15,14 +15,15 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PARENT_DIR = os.path.dirname(CURRENT_DIR)
 
 if __name__ == "__main__":
-    env = FJSPEnv(window_size=2, num_agents=6, max_steps=30, episode=1)
+    env = FJSPEnv(window_size=2, num_agents=6, max_steps=40, episode=1)
     rewards = {}
     makespan = {}
     energy= {}
     episode_seed=0
     for episode in range(1, 1+1):
         print("\nepisode:", episode)
-        state, info = env.reset(seed=1+episode)
+        state, info = env.reset(seed=1000+episode)
+        print("state:\n", state)
         if (episode-1) %1 == 0:
             episode_seed= episode-1
 
@@ -51,6 +52,8 @@ if __name__ == "__main__":
 
             next_state, reward, done, truncated, info = env.step(actions)
             env.render()
+            print("next_state:\n", next_state)
+            print()
             reward = np.mean(reward)
             #reward= reward[0]
             reward_satu_episode += reward

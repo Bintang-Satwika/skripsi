@@ -6,13 +6,8 @@ import math
 # ============================================================================
 class Agent:
     def __init__(self, agent_id: int, position: int, operation_capability : list, speed : float,  window_size: int, num_agent: int):
-        self.window_size = window_size  # Ukuran window
-        '''
-        Atribut state
-        position (int), operation_capability (num_operation=2), operation_now (int), status_all (num_agents=3), 
-        first_product_operation (window_size=3), second_product_operation (window_size=3), pick_product_window (int)
-        '''
-
+        
+        self.window_size = window_size  # Ukuran window robot
         self.position = position  # Fixed position pada conveyor 
         self.operation_capability = operation_capability # Kemampuan operasi robot
         self.operation_now = 0   # Operasi yang sedang dikerjakan pada workbench
@@ -32,7 +27,7 @@ class Agent:
         # self.pending_reinsertion = False
 
         # baru
-        # self.workbench = {}
+        self.workbench = {}
         # self.window_product=[None]*window_size
         # self.buffer_job_to_workbench ={}
         # self.buffer_job_to_conveyor = {}
@@ -48,9 +43,9 @@ class Agent:
             np.array(self.operation_capability),
             np.array([self.operation_now]),
             np.array(self.status_all),          # Perbaikan: tidak dibungkus list lagi
-            np.array(self.first_product_operation),
-            np.array(self.second_product_operation),
-            np.array([self.pick_product_window])
+            np.array(self.workbench_remaining_operation),
+            np.array(self.remaining_operation),
+            np.array([self.processing_time_remaining])
 
         ])
 

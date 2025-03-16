@@ -8,7 +8,7 @@ from env_2 import FJSPEnv
 from RULED_BASED import MASKING_action
 # Environment settings
 RENDER_MODE = None
-EPISODE_START =  280
+EPISODE_START =  480
 
 STATE_DIM = 14
 ACTION_DIM = 5
@@ -21,7 +21,7 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 # Get the parent directory of the current directory
 PARENT_DIR = os.path.dirname(CURRENT_DIR)
 print("PARENT_DIR:", PARENT_DIR)
-MODEL_DIR = os.path.join(PARENT_DIR,'main_dir_9', "model_RANDOM_priority_18")
+MODEL_DIR = os.path.join(PARENT_DIR,'main_dir_9', "model_RANDOM_priority_21")
 
 
 class DDQN_model:
@@ -38,8 +38,8 @@ class DDQN_model:
         state_input = layers.Input(shape=(self.num_agents, self.state_dim))
         
         # Apply Dense layers without activation and then apply LeakyReLU using TimeDistributed
-        x = layers.TimeDistributed(layers.Dense(256, activation='relu'))(state_input)
-        x = layers.TimeDistributed(layers.Dense(128, activation='relu'))(x)
+        x = layers.TimeDistributed(layers.Dense(64, activation='relu'))(state_input)
+        x = layers.TimeDistributed(layers.Dense(64, activation='relu'))(x)
         output = layers.TimeDistributed(layers.Dense(self.action_dim, activation='linear'))(x)
         
         model = models.Model(inputs=state_input, outputs=output)
@@ -137,7 +137,7 @@ def run_env(num_episodes, render):
         }
 
         # Write the combined dictionary to a single JSON file
-        file_path = os.path.join(CURRENT_DIR, "Testing_RL_18_20ep.json")
+        file_path = os.path.join(CURRENT_DIR, "Testing_RL_21_30ep.json")
         with open(file_path, "w") as f:
             json.dump(combined_data, f, indent=4)
 

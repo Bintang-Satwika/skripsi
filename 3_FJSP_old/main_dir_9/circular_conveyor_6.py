@@ -4,11 +4,11 @@ import math
 # produk  tidak ada random poisson, namun product  A-B-C dirandom choice
 
 class CircularConveyor:
-    def __init__(self, num_agents: int, current_episode_count: int):
-        self.num_sections = 12            # Total number of sections
-        self.max_capacity = 0.75            # Maximum fill percentage (e.g., 75%)
-        self.n_jobs=21
-        self.conveyor = [None] * self.num_sections       # Initialize empty conveyor
+    def __init__(self, num_sections: int, max_capacity: int, arrival_rate:float, num_agents: int, n_jobs: int, current_episode_count: int):
+        self.num_sections = num_sections            # Total number of sections
+        self.max_capacity = max_capacity            # Maximum fill percentage (e.g., 75%)
+        self.arrival_rate = arrival_rate            # Poisson arrival rate for jobs
+        self.conveyor = [None] * num_sections       # Initialize empty conveyor
         self.buffer_jobs = []                       # Buffer for jobs when the entry is full
         self.total_jobs = {"A": 0, "B": 0, "C": 0}    # Job counters per product
           # Job counters per product
@@ -21,12 +21,12 @@ class CircularConveyor:
             "B": [1,2,3],
             "C": [1,2,3],
         }
-        dummy1 =[1,3,2]
-        dummy2 =[x * 2 for x in dummy1] 
-        dummy3 = [x * 3 for x in dummy1] 
+        dummy =[8,10,6]
+        dummy2 =dummy*1
+        dummy3 = dummy*1
 
         self.base_processing_times = {
-            "A":[dummy1[0], dummy1[1],dummy1[2]],
+            "A":[dummy[0], dummy[1],dummy2[2]],
             "B":[dummy2[0],dummy2[1], dummy2[2]],
             "C":[dummy3[0], dummy3[1], dummy3[2]],
         }
@@ -34,6 +34,7 @@ class CircularConveyor:
         self.job_sequence = list(self.total_jobs.keys())
         self.job_details = {}  # For each job, stores its remaining operations.
         self.product_completed = []  # Buffer for finished products.
+        self.n_jobs=n_jobs
         self.sum_n_jobs=0
         self.num_agents=num_agents
         self.iteration=0
@@ -53,9 +54,17 @@ class CircularConveyor:
         for i in range(self.num_sections - 1, 0, -1):
             self.conveyor[i] = self.conveyor[i - 1]
         self.conveyor[0] = last_job
+        # If the first section is empty, load a job from the buffer.
+        # np.random.seed(100+self.episode+self.iteration)
+        # np.random.seed(2*self.episode+2*self.iteration)
+        # print(" np.random.poisson:",  np.random.poisson(lam=0.8))
+        #if   np.random.choice([True, False], p=[0.25, 0.75]) > 0:
+       # if  np.random.poisson(lam=0.3)>0:
         if (self.buffer_jobs and 
             sum(1 for x in self.conveyor if x is not None) < self.max_capacity * self.num_sections and 
-            self.conveyor[0] is None):
+            self.conveyor[0] is None and 
+            sum(1 for x in self.conveyor if x is None)> self.num_agents
+            ) :
             self.conveyor[0] = self.buffer_jobs.pop(0)
 
     def generate_jobs(self):
@@ -63,7 +72,7 @@ class CircularConveyor:
         if self.sum_n_jobs < self.n_jobs:
             self.iteration += 1
             random.seed(int(self.episode))
-            if self.iteration % random.randint(1,5)== 0  or self.iteration==1:
+            if self.iteration % random.randint(1, 5)== 0  or self.iteration==1:
                 new_job = 1
             else:
                 new_job = 0
@@ -75,7 +84,7 @@ class CircularConveyor:
                     # No product type is allowed (each has reached 7), so do nothing.
                     return
     
-                random.seed(int(self.episode+2*self.iteration))
+                random.seed(int(2*self.episode+1*self.iteration))
                 product_type = random.choice(allowed_types)
                 self.sum_n_jobs += 1
                 self.add_job(product_type)

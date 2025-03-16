@@ -17,7 +17,7 @@ class CircularConveyor:
         #   - Product B: operations 2, 3
         #   - Product C: operations 1, 2
         self.product_operations = {
-            "A": [1,2.3],
+            "A": [1,2,3],
             "B": [1,2,3],
             "C": [1,2,3],
         }
@@ -84,7 +84,7 @@ class CircularConveyor:
                     # No product type is allowed (each has reached 7), so do nothing.
                     return
     
-                random.seed(int(self.episode+2*self.iteration))
+                random.seed(int(2*self.episode+1*self.iteration))
                 product_type = random.choice(allowed_types)
                 self.sum_n_jobs += 1
                 self.add_job(product_type)

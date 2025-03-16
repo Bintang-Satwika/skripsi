@@ -50,15 +50,19 @@ class FJSPEnv(gym.Env):
         self.state_operation_now_location=3
         self.state_status_location_all = list(range(4, 4 + self.num_agents))
         self.state_workbench_remaining_operation = 4 + self.num_agents
-        self.state_workbench_degree_of_completion = 5 + self.num_agents
-        self.state_remaining_operation = list(range(6 + self.num_agents, 6 + self.num_agents + self.window_size))
-        self.state_processing_time_remaining = list(range(6 + self.num_agents + self.window_size, 6 + self.num_agents + 2 * self.window_size))
+        self.state_workbench_processing_time_remaining = 5 + self.num_agents
+        self.state_workbench_degree_of_completion = 6 + self.num_agents # 12
+        self.state_remaining_operation = list(range(7 + self.num_agents, 7 + self.num_agents + self.window_size)) # 13 dan 14
+        self.state_processing_time_remaining = list(range(7 + self.num_agents + self.window_size, 7 + self.num_agents + 2 * self.window_size)) # 15 dan 16
+        self.state_degree_of_completion= list(range(8 + self.num_agents + self.window_size, 8 + self.num_agents + 2 * self.window_size)) # 17 dan 18
 
         print("self.state_status_location_all: ", self.state_status_location_all)
         print("self.state_workbench_remaining_operation: ", self.state_workbench_remaining_operation)
+        print("self.state_workbench_processing_time_remaining: ", self.state_workbench_processing_time_remaining)
         print("self.state_workbench_degree_of_completion: ", self.state_workbench_degree_of_completion)
         print("self.state_remaining_operation: ", self.state_remaining_operation)
         print("self.state_processing_time_remaining: ", self.state_processing_time_remaining)
+        print("self.state_degree_of_completion: ", self.state_degree_of_completion)
 
         #---------------------------------------------------------------------
         # Ruang observasi: tiap agen memiliki state vektor berukuran 14
@@ -184,14 +188,26 @@ class FJSPEnv(gym.Env):
         for i, agent in enumerate(self.agents):
             window_sections = [int(observation_all[i][0]) - r for r in range(0, self.window_size)]
             agent.window_product=np.array(self.conveyor.conveyor)[window_sections]
-            # agent.window_product=np.array(self.conveyor.conveyor)[window_sections]
-            job_details_value= [(self.conveyor.job_details.get(self.conveyor.conveyor[job_window], [])) for job_window in window_sections]
-            #print("agent-id: ", agent.id)
-            #print("job_details_value: ", job_details_value)
+            job_details_items = [
+                (self.conveyor.conveyor[job_window].split('-')[0] if job_window < len(self.conveyor.conveyor) and self.conveyor.conveyor[job_window] else  None,
+                self.conveyor.job_details.get(self.conveyor.conveyor[job_window], []) if job_window < len(self.conveyor.conveyor) and self.conveyor.conveyor[job_window] else [])
+                for job_window in window_sections
+            ]
+
+            name_jobs, operation_jobs = zip(*job_details_items)
+            print()           
             # remaining operation bergeser sesuai window size
-            for j, value in enumerate(job_details_value):
-                #print("value: ", value, "j: ", j)
-                next_observation_all[i, self.state_remaining_operation[j]] = len(value) if len(value)>0 else 0
+            for j, (name, operation) in enumerate(zip(name_jobs, operation_jobs)):
+                #print("j:", j, " name: ", name, "operation: ", operation)
+                next_observation_all[i, self.state_remaining_operation[j]] = len(operation) if len(operation)>0 else 0
+                if next_observation_all[i, self.state_remaining_operation[j]]==3:
+                    next_observation_all[i, self.state_processing_time_remaining[j]] = self.base_processing_times[name][operation[0]] if len(operation)>0 else 0
+                elif next_observation_all[i, self.state_remaining_operation[j]]==2:
+                    next_observation_all[i, self.state_processing_time_remaining[j]] = self.base_processing_times[name][operation[1]] if len(operation)>0 else 0
+                elif next_observation_all[i, self.state_remaining_operation[j]]==1:
+                    next_observation_all[i, self.state_processing_time_remaining[j]] = self.base_processing_times[name][operation[2]] if len(operation)>0 else 0
+                else:
+                    next_observation_all[i, self.state_processing_time_remaining[j]] = 0
 
 
         return next_observation_all

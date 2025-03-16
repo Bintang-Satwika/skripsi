@@ -22,7 +22,7 @@ if __name__ == "__main__":
     makespan = {}
     energy= {}
     episode_seed=0
-    for episode in range(1, 200+1):
+    for episode in range(1, 30+1):
         print("\nepisode:", episode)
         state, info = env.reset(seed=1000+episode)
         if (episode-1) %1 == 0:
@@ -85,7 +85,7 @@ if __name__ == "__main__":
         "energy": energy }
 
         # Write the combined dictionary to a single JSON file
-        file_path = os.path.join(CURRENT_DIR, "Testing_FAA_14.json")
+        file_path = os.path.join(CURRENT_DIR, "Testing_FAA_18.json")
         with open(file_path, "w") as f:
             json.dump(combined_data, f, indent=4)
 

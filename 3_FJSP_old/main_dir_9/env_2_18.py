@@ -58,7 +58,7 @@ class FJSPEnv(gym.Env):
         self.state_pick_job_window_location=13
         #---------------------------------------------------------------------
         self.agent_many_operations= 2
-        self.multi_agent_speed = np.array([[1, 2.0, None], [None, 1, 2.0], [2.0,None,  1]]) #
+        self.multi_agent_speed = np.array([[1, 2.0, None], [None, 1, 2.0], [2.0,None,  2.0]]) #
         # self.base_processing_times = [60, 52, 48]   #  waktu dasar untuk setiap operasi
         # self.base_processing_times = [36, 24, 30]   #  waktu dasar untuk setiap operasi
         # self.base_processing_times = [18,18,18]   #  waktu dasar untuk setiap operasi
@@ -472,8 +472,7 @@ class FJSPEnv(gym.Env):
         reward_wait_all = self.reward_wait(self.observation_all, actions, self.is_action_wait_succeed)
         reward_working_all = self.reward_working(self.observation_all, self.is_status_working_succeed )
         reward_step_all = self.reward_complete()
-        reward_accept_all = self.reward_accept(self.observation_all)
-        reward_agent_all=-0.5+reward_wait_all+reward_working_all+reward_step_all+reward_accept_all
+        reward_agent_all=-0.5+reward_wait_all+reward_working_all+reward_step_all
         # print("reward_wait_all: ", reward_wait_all)
         # print("reward_working_all: ", reward_working_all)
         # print("reward_step_all: ", reward_step_all)
@@ -486,27 +485,21 @@ class FJSPEnv(gym.Env):
         return next_observation_all, reward_agent_all, done_step, truncated_step, info_step
     
 
-    def reward_accept(self, observations, k_accept=0.5):
-        rewards=[]
-        for r, agent in enumerate(self.agents):
-            obs=observations[r]
-            if obs[self.state_status_location_all[r]]==1:
-                rewards.append(k_accept)
-            else:
-                rewards.append(0)
-        return rewards
     
     def reward_wait(self, observations, actions,  is_action_wait_succeed,k_wait=0.5):
         rewards=[]
         for i, agent in enumerate(self.agents):
             
-            if (actions[i]==1 or actions[i]==2) and is_action_wait_succeed[i]:
+            if (actions[i]==1 or actions[i]==2 or actions[i]==0) and is_action_wait_succeed[i]:
                 if actions[i]==1:
                     factor_x=2.0
                     operation=int( observations[i, self.state_first_job_operation_location[1]]-1)
                 elif actions[i]==2:
                     factor_x=3.0
                     operation=int(observations[i, self.state_first_job_operation_location[2]]-1)
+                elif actions[i]==0:
+                    factor_x=1.0
+                    operation=int(observations[i, self.state_operation_now_location]-1)
                 else:
                     print("FAILED ACTION: actions is not 1 or 2")
                 #print("operation: ", operation)
@@ -521,7 +514,7 @@ class FJSPEnv(gym.Env):
         return np.multiply(k_wait,rewards)
 
 
-    def reward_working(self, observations, is_status_working_succeed , k_working=1, k_energy=1):
+    def reward_working(self, observations, is_status_working_succeed , k_working=2, k_energy=1):
         rewards=[]
         for r, agent in enumerate(self.agents):
            # obs=observations[r]

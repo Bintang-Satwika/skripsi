@@ -3,7 +3,7 @@ import random
 import math
 import gymnasium as gym
 from gymnasium import spaces
-from circular_conveyor_6 import CircularConveyor
+from circular_conveyor_5 import CircularConveyor
 from agent_2 import Agent
 '''
 1. Urutan update state-> move conveyor -> generate jobs -> update state Syrt
@@ -473,7 +473,7 @@ class FJSPEnv(gym.Env):
         reward_working_all = self.reward_working(self.observation_all, self.is_status_working_succeed )
         reward_step_all = self.reward_complete()
         reward_accept_all = self.reward_accept(self.observation_all)
-        reward_agent_all=-0.5+reward_wait_all+reward_working_all+reward_step_all+reward_accept_all
+        reward_agent_all=-1+reward_wait_all+reward_working_all+reward_step_all+reward_accept_all
         # print("reward_wait_all: ", reward_wait_all)
         # print("reward_working_all: ", reward_working_all)
         # print("reward_step_all: ", reward_step_all)
@@ -521,7 +521,7 @@ class FJSPEnv(gym.Env):
         return np.multiply(k_wait,rewards)
 
 
-    def reward_working(self, observations, is_status_working_succeed , k_working=1, k_energy=1):
+    def reward_working(self, observations, is_status_working_succeed , k_working=2, k_energy=1):
         rewards=[]
         for r, agent in enumerate(self.agents):
            # obs=observations[r]
@@ -536,7 +536,7 @@ class FJSPEnv(gym.Env):
                 rewards.append(0)
         return np.multiply(k_working,rewards)
     
-    def reward_complete(self, k_complete=3):
+    def reward_complete(self, k_complete=4):
         value = k_complete*self.total_process_done
         self.total_process_done=0
         return value

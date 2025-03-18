@@ -24,6 +24,7 @@ class Agent:
         self.id = agent_id
         self.speed = speed
         self.workbench = {}
+        self.workbench_total_processing_unit = 0
         # self.window_product=[None]*window_size
         # self.buffer_job_to_workbench ={}
         # self.buffer_job_to_conveyor = {}

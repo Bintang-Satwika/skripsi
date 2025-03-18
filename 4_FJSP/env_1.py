@@ -64,15 +64,17 @@ class FJSPEnv(gym.Env):
         print("self.state_degree_of_completion_location: ", self.state_degree_of_completion_location)
 
         #---------------------------------------------------------------------
-        # Ruang observasi: tiap agen memiliki state vektor berukuran 14
+        # Ruang observasi: tiap agen memiliki state vektor berukuran 19
         # 1. posisi conveyor (integer)
         # 2. operasi yang bisa dilakukan oleh agent  (list [o1,o2])
         # 3. operasi sekarang yang sedang dikerjakan oleh agent (integer)
         # 4. status seluruh agent (list [agent ke-1 hingga agent ke-6] dari 0=agent tidak aktif (rusak), 1=idle, 2=accept, 3=working, 4=completing)
         # 5.  remaining operation pada workbench (integer)
-        # 6.  degree of completion pada workbench (float)
-        # 7.  remaining operation pada window (list [o1,o2,o3])
-        # 8.  processing time remaining pada window (list [t1,t2,t3])
+        # 6.  remaining processing time pada workbench (float)
+        # 7.  degree of completion pada workbench (float)
+        # 8.  remaining operation pada window (list [o1,o2,o3])
+        # 9.  processing time remaining pada window (list [t1,t2,t3])
+        # 10. degree of completion pada window (list [d1,d2,d3])
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_agents, 1+ 2+ 1+ self.num_agents+ 1+ 1+ 2*self.window_size), dtype=np.float32)
         # ---------------------------------------------------------------------
         # 3 aksi: 0=CONTINUE,  1=DECLINE, 2=ACCEPT
@@ -153,6 +155,9 @@ class FJSPEnv(gym.Env):
                 speed= self.multi_agent_speeds[r][speed_current_operation]
                 agent.processing_time_remaining =  agent.processing_time( observation[self.state_processing_time_remaining_location[0]], speed)
                 observation[self.state_workbench_processing_time_remaining_location]=float(agent.processing_time_remaining)
+                jenis_product, panjang_operasi = agent.window_product[0].split('-')[0], len(list(agent.workbench.values())[0])
+                print("jenis_product: ", jenis_product, "panjang_operasi: ", panjang_operasi)
+                agent.workbench_total_processing_unit = sum(self.conveyor.base_processing_times[jenis_product][:panjang_operasi]) 
 
                 # pengosongan window
                 observation[self.state_remaining_operation_location[0]]=0
@@ -189,6 +194,9 @@ class FJSPEnv(gym.Env):
 
         if observation[status_location]==3:
             observation[self.state_workbench_processing_time_remaining_location]-= 1
+            
+
+        
 
 
         return observation, agent
@@ -223,6 +231,7 @@ class FJSPEnv(gym.Env):
             3. jika tidak, maka status agent tetap continue dan menunggu conveyor yr kosong agar product dapat dikembalikan ke conveyor
             4. Agent akan menjadi idle dan workbench akan dikosongkan
             '''
+
                 
             self.agents[i]=agent
             next_observation_all[i]=observation
@@ -294,6 +303,6 @@ class FJSPEnv(gym.Env):
         for a, agent in enumerate(self.agents):
             #print("self.conveyor.job_details:, ", self.conveyor.job_details)
             print(f"Status Agent {agent.id} at position {int(self.observation_all[a][0])}: {int(self.observation_all[a][self.state_status_location_all[a]]) }")
-            print("window product: ", agent.window_product, "\nworkbench: ", agent.workbench)
+            print("window product: ", agent.window_product, "\nworkbench: ", agent.workbench, "total remaining unit:",agent.workbench_total_processing_unit,)
         self.conveyor.display()
 

@@ -21,7 +21,7 @@ class CircularConveyor:
             "B": [1,2,3],
             "C": [1,2,3],
         }
-        dummy1 =[1,3,2]
+        dummy1 =[2,3,1]
         dummy2 =[x * 2 for x in dummy1] 
         dummy3 = [x * 3 for x in dummy1] 
 
@@ -62,7 +62,7 @@ class CircularConveyor:
         """Generates new jobs based on a Poisson process (if below maximum capacity)."""
         if self.sum_n_jobs < self.n_jobs:
             self.iteration += 1
-            random.seed(int(self.episode))
+            random.seed(int(2*self.episode+2*self.iteration))
             if self.iteration % random.randint(1,5)== 0  or self.iteration==1:
                 new_job = 1
             else:
@@ -75,7 +75,7 @@ class CircularConveyor:
                     # No product type is allowed (each has reached 7), so do nothing.
                     return
     
-                random.seed(int(self.episode+2*self.iteration))
+                random.seed(int(2*self.episode+2*self.iteration))
                 product_type = random.choice(allowed_types)
                 self.sum_n_jobs += 1
                 self.add_job(product_type)

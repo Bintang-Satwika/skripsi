@@ -15,7 +15,7 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PARENT_DIR = os.path.dirname(CURRENT_DIR)
 
 if __name__ == "__main__":
-    env = FJSPEnv(window_size=2, num_agents=6, max_steps=40, episode=1)
+    env = FJSPEnv(window_size=2, num_agents=5, max_steps=10, episode=1)
     rewards = {}
     makespan = {}
     energy= {}
@@ -41,15 +41,18 @@ if __name__ == "__main__":
 
             #actions, masking=HITL_action(state, env)
             actions=[0]*6
-
-            #print("actions:", actions)
+            for r, state_agent in enumerate(state):
+                if state_agent[env.state_status_location_all[r]]==1 and state_agent[env.state_workbench_remaining_operation_location]==0 and state_agent[env.state_remaining_operation_location[0]]>0:
+                    print("current")
+                    print("Agent ", r, " is accept")
+                    actions[r]=2
+            
 
 
             if None in actions:
                 print("FAILED ACTION: ", actions)
                 break
-
-
+            print("actions:", actions)
             next_state, reward, done, truncated, info = env.step(actions)
             env.render()
             print("next_state:\n", next_state)

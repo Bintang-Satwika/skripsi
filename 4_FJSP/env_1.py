@@ -5,6 +5,7 @@ import gymnasium as gym
 from gymnasium import spaces
 from circular_conveyor_1 import CircularConveyor
 from agent_1 import Agent
+import sys
 '''
 1. Urutan update state-> move conveyor -> generate jobs -> update state Syrt
 2. sudah bisa mengembalikan barang dari workbench ke conveyor
@@ -49,20 +50,20 @@ class FJSPEnv(gym.Env):
         self.state_operation_capability_location=[1,2]
         self.state_operation_now_location=3
         self.state_status_location_all = list(range(4, 4 + self.num_agents))
-        self.state_workbench_remaining_operation = 4 + self.num_agents
-        self.state_workbench_processing_time_remaining = 5 + self.num_agents
-        self.state_workbench_degree_of_completion = 6 + self.num_agents # 12
-        self.state_remaining_operation = list(range(7 + self.num_agents, 7 + self.num_agents + self.window_size)) # 13 dan 14
-        self.state_processing_time_remaining = list(range(7 + self.num_agents + self.window_size, 7 + self.num_agents + 2 * self.window_size)) # 15 dan 16
-        self.state_degree_of_completion= list(range(8 + self.num_agents + self.window_size, 8 + self.num_agents + 2 * self.window_size)) # 17 dan 18
+        self.state_workbench_remaining_operation_location = 4 + self.num_agents
+        self.state_workbench_processing_time_remaining_location = 5 + self.num_agents
+        self.state_workbench_degree_of_completion_location = 6 + self.num_agents # 12
+        self.state_remaining_operation_location = list(range(7 + self.num_agents, 7 + self.num_agents + self.window_size)) # 13 dan 14
+        self.state_processing_time_remaining_location = list(range(7 + self.num_agents + self.window_size, 7 + self.num_agents + 2*self.window_size)) # 15 dan 16
+        self.state_degree_of_completion_location= list(range(7 + self.num_agents + 2*self.window_size,7 + self.num_agents + 3 * self.window_size)) # 17 dan 18
 
         print("self.state_status_location_all: ", self.state_status_location_all)
-        print("self.state_workbench_remaining_operation: ", self.state_workbench_remaining_operation)
-        print("self.state_workbench_processing_time_remaining: ", self.state_workbench_processing_time_remaining)
-        print("self.state_workbench_degree_of_completion: ", self.state_workbench_degree_of_completion)
-        print("self.state_remaining_operation: ", self.state_remaining_operation)
-        print("self.state_processing_time_remaining: ", self.state_processing_time_remaining)
-        print("self.state_degree_of_completion: ", self.state_degree_of_completion)
+        print("self.state_workbench_remaining_operation_location: ", self.state_workbench_remaining_operation_location)
+        print("self.state_workbench_processing_time_remaining_location: ", self.state_workbench_processing_time_remaining_location)
+        print("self.state_workbench_degree_of_completion_location: ", self.state_workbench_degree_of_completion_location)
+        print("self.state_remaining_operation_location: ", self.state_remaining_operation_location)
+        print("self.state_processing_time_remaining_location: ", self.state_processing_time_remaining_location)
+        print("self.state_degree_of_completion_location: ", self.state_degree_of_completion_location)
 
         #---------------------------------------------------------------------
         # Ruang observasi: tiap agen memiliki state vektor berukuran 14
@@ -123,8 +124,33 @@ class FJSPEnv(gym.Env):
             return self.initial_state(), {}
 
     
-    def action_accept(self, observation, agent, i, status_location):
-        pass
+    def action_accept(self, observation, agent, r, status_location):
+        if observation[status_location]==1 and observation[self.state_workbench_remaining_operation_location]==0 and observation[self.state_remaining_operation_location[0]]>0:
+            print("ACCEPT NOW")
+            # perpindahan dari conveyor ke workbench
+            observation[status_location]=2 # Status dari IDLE menjadi ACCEPT
+            observation[self.state_workbench_remaining_operation_location]=observation[self.state_remaining_operation_location[0]]
+            observation[self.state_workbench_processing_time_remaining_location]=observation[self.state_processing_time_remaining_location[0]]
+            observation[self.state_workbench_degree_of_completion_location]=observation[self.state_degree_of_completion_location[0]]
+            agent.workbench["%s"%agent.window_product[0]]= self.conveyor.job_details.get(agent.window_product[0], [])
+
+            # operation now berubah dari 0 menjadi 1 atau 2 atau 3 sesuai remaining operation
+            if observation[self.state_workbench_remaining_operation_location]==3:
+                observation[self.state_operation_now_location]=1
+            elif observation[self.state_workbench_remaining_operation_location]==2:
+                observation[self.state_operation_now_location]=2
+            elif observation[self.state_workbench_remaining_operation_location]==1:
+                observation[self.state_operation_now_location]=3
+            else:
+                print("ERROR: there is no remaining job")
+                sys.exit(1) 
+            
+            # pengosongan window
+            observation[self.state_remaining_operation_location[0]]=0
+            observation[self.state_processing_time_remaining_location[0]]=0
+            observation[self.state_degree_of_completion_location[0]]=0
+            self.conveyor.conveyor[int(self.multi_agent_positions[r])] = None
+            
         return observation, agent
     
 
@@ -148,7 +174,6 @@ class FJSPEnv(gym.Env):
     def update_state(self, observation_all,  actions):
         next_observation_all=observation_all
         # next_observation_all=np.array(next_observation_all)
-
         for i, agent in enumerate(self.agents):
             observation=observation_all[i]
             status_location=self.state_status_location_all[i]
@@ -185,6 +210,10 @@ class FJSPEnv(gym.Env):
         self.conveyor.move_conveyor()
         self.conveyor.generate_jobs()
 
+
+        '''
+        update window state sesuai perpindahan conveyor
+        '''
         for i, agent in enumerate(self.agents):
             window_sections = [int(observation_all[i][0]) - r for r in range(0, self.window_size)]
             agent.window_product=np.array(self.conveyor.conveyor)[window_sections]
@@ -194,20 +223,19 @@ class FJSPEnv(gym.Env):
                 for job_window in window_sections
             ]
 
-            name_jobs, operation_jobs = zip(*job_details_items)
-            print()           
+            name_jobs, operation_jobs = zip(*job_details_items)       
             # remaining operation bergeser sesuai window size
             for j, (name, operation) in enumerate(zip(name_jobs, operation_jobs)):
                 #print("j:", j, " name: ", name, "operation: ", operation)
-                next_observation_all[i, self.state_remaining_operation[j]] = len(operation) if len(operation)>0 else 0
-                if next_observation_all[i, self.state_remaining_operation[j]]==3:
-                    next_observation_all[i, self.state_processing_time_remaining[j]] = self.base_processing_times[name][operation[0]] if len(operation)>0 else 0
-                elif next_observation_all[i, self.state_remaining_operation[j]]==2:
-                    next_observation_all[i, self.state_processing_time_remaining[j]] = self.base_processing_times[name][operation[1]] if len(operation)>0 else 0
-                elif next_observation_all[i, self.state_remaining_operation[j]]==1:
-                    next_observation_all[i, self.state_processing_time_remaining[j]] = self.base_processing_times[name][operation[2]] if len(operation)>0 else 0
+                next_observation_all[i, self.state_remaining_operation_location[j]] = len(operation) if len(operation)>0 else 0
+                if next_observation_all[i, self.state_remaining_operation_location[j]]==3:
+                    next_observation_all[i, self.state_processing_time_remaining_location[j]] = self.base_processing_times[name][operation[0]] if len(operation)>0 else 0
+                elif next_observation_all[i, self.state_remaining_operation_location[j]]==2:
+                    next_observation_all[i, self.state_processing_time_remaining_location[j]] = self.base_processing_times[name][operation[1]] if len(operation)>0 else 0
+                elif next_observation_all[i, self.state_remaining_operation_location[j]]==1:
+                    next_observation_all[i, self.state_processing_time_remaining_location[j]] = self.base_processing_times[name][operation[2]] if len(operation)>0 else 0
                 else:
-                    next_observation_all[i, self.state_processing_time_remaining[j]] = 0
+                    next_observation_all[i, self.state_processing_time_remaining_location[j]] = 0
 
 
         return next_observation_all
@@ -238,7 +266,7 @@ class FJSPEnv(gym.Env):
         return next_observation_all, reward_agent_all, done_step, truncated_step, info_step
     
     def render(self):
-        print(f"Time Step: {self.step_count}")
+        #Time Step: {self.step_count}")
         print("\nNEXT STATE RENDER:")
         for a, agent in enumerate(self.agents):
             #print("self.conveyor.job_details:, ", self.conveyor.job_details)

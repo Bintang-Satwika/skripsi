@@ -128,7 +128,7 @@ class FJSPEnv(gym.Env):
         if observation[status_location]==1 and observation[self.state_workbench_remaining_operation_location]==0 and observation[self.state_remaining_operation_location[0]]>0:
             print("ACCEPT NOW")
             # perpindahan dari conveyor ke workbench
-            observation[status_location]=2 # Status dari IDLE menjadi ACCEPT
+            self.observation_all[:, status_location]=2 # Status dari IDLE menjadi ACCEPT
             observation[self.state_workbench_remaining_operation_location]=observation[self.state_remaining_operation_location[0]]
             observation[self.state_workbench_processing_time_remaining_location]=observation[self.state_processing_time_remaining_location[0]]
             observation[self.state_workbench_degree_of_completion_location]=observation[self.state_degree_of_completion_location[0]]

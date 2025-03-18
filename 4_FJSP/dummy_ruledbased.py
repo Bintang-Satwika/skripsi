@@ -15,7 +15,7 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PARENT_DIR = os.path.dirname(CURRENT_DIR)
 
 if __name__ == "__main__":
-    env = FJSPEnv(window_size=2, num_agents=5, max_steps=10, episode=1)
+    env = FJSPEnv(window_size=2, num_agents=6, max_steps=10, episode=1)
     rewards = {}
     makespan = {}
     energy= {}

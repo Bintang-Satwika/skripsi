@@ -1,6 +1,4 @@
 import numpy as np
-import random
-import math
 import gymnasium as gym
 from gymnasium import spaces
 from circular_conveyor_1 import CircularConveyor
@@ -31,14 +29,14 @@ class FJSPEnv(gym.Env):
         self.total_process_done=0
         self.reward_product_complete=0
         self.FAILED_ACTION = False
-
+        self.max_remaining_operation=3
         # base processing times for each job type and operation
         self.base_processing_times ={}
 
         # Konfigurasi agent
         # Parameter Agent
         self.agents = []
-        self.multi_agent_speeds = [[1, 2.0], [1, 2.0], [1, 2.0], [2.0, 1], [2.0, 1], [2.0, 1]] 
+        self.multi_agent_speeds = [[2, 2.0], [1, 2.0], [1, 2.0], [2.0, 1], [2.0, 1], [2.0, 1]] 
         self.multi_agent_energy_consumption=[0,0,0]   
         # STATE 
         # Fixed positions (indeks 0-based): Agent1: 1, Agent2: 3, Agent3: 5, Agent4: 7, Agent5: 9, Agent6: 11
@@ -125,36 +123,52 @@ class FJSPEnv(gym.Env):
 
     
     def action_accept(self, observation, agent, r, status_location):
-        if observation[status_location]==1 and observation[self.state_workbench_remaining_operation_location]==0 and observation[self.state_remaining_operation_location[0]]>0:
-            print("ACCEPT NOW")
-            # perpindahan dari conveyor ke workbench
-            self.observation_all[:, status_location]=2 # Status dari IDLE menjadi ACCEPT
-            observation[self.state_workbench_remaining_operation_location]=observation[self.state_remaining_operation_location[0]]
-            observation[self.state_workbench_processing_time_remaining_location]=observation[self.state_processing_time_remaining_location[0]]
-            observation[self.state_workbench_degree_of_completion_location]=observation[self.state_degree_of_completion_location[0]]
-            agent.workbench["%s"%agent.window_product[0]]= self.conveyor.job_details.get(agent.window_product[0], [])
 
-            # operation now berubah dari 0 menjadi 1 atau 2 atau 3 sesuai remaining operation
-            if observation[self.state_workbench_remaining_operation_location]==3:
-                observation[self.state_operation_now_location]=1
-            elif observation[self.state_workbench_remaining_operation_location]==2:
-                observation[self.state_operation_now_location]=2
-            elif observation[self.state_workbench_remaining_operation_location]==1:
-                observation[self.state_operation_now_location]=3
-            else:
-                print("ERROR: there is no remaining job")
-                sys.exit(1) 
-            
-            # pengosongan window
-            observation[self.state_remaining_operation_location[0]]=0
-            observation[self.state_processing_time_remaining_location[0]]=0
-            observation[self.state_degree_of_completion_location[0]]=0
-            self.conveyor.conveyor[int(self.multi_agent_positions[r])] = None
+        speed_current_operation=None
+
+        if observation[status_location]==1 and observation[self.state_workbench_remaining_operation_location]==0 and observation[self.state_remaining_operation_location[0]]>0:
+            if int(1+self.max_remaining_operation-observation[self.state_remaining_operation_location[0]]) in observation[self.state_operation_capability_location]:
+                print("ACCEPT NOW")
+                # perpindahan dari conveyor ke workbench
+                self.observation_all[:, status_location]=2 # Status dari IDLE menjadi ACCEPT
+                observation[self.state_workbench_remaining_operation_location]=observation[self.state_remaining_operation_location[0]]
+                observation[self.state_workbench_degree_of_completion_location]=observation[self.state_degree_of_completion_location[0]]
+                agent.workbench["%s"%agent.window_product[0]]= self.conveyor.job_details.get(agent.window_product[0], [])
+
+                # operation now berubah dari 0 menjadi 1 atau 2 atau 3 sesuai 1+self.max_remaining_operation dikurangi remaining operation
+                if observation[self.state_workbench_remaining_operation_location]==3:
+                    observation[self.state_operation_now_location]=1
+                    speed_current_operation=0
+                elif observation[self.state_workbench_remaining_operation_location]==2:
+                    observation[self.state_operation_now_location]=2
+                    speed_current_operation=1
+                elif observation[self.state_workbench_remaining_operation_location]==1:
+                    observation[self.state_operation_now_location]=3
+                    speed_current_operation=1
+                else:
+                    print("ERROR: there is no remaining job")
+                    sys.exit(1) 
+
+                # perhitungan waktu untuk workbench processing time
+                speed= self.multi_agent_speeds[r][speed_current_operation]
+                agent.processing_time_remaining =  agent.processing_time( observation[self.state_processing_time_remaining_location[0]], speed)
+                observation[self.state_workbench_processing_time_remaining_location]=float(agent.processing_time_remaining)
+
+                # pengosongan window
+                observation[self.state_remaining_operation_location[0]]=0
+                observation[self.state_processing_time_remaining_location[0]]=0
+                observation[self.state_degree_of_completion_location[0]]=0
+                self.conveyor.conveyor[int(self.multi_agent_positions[r])] = None
+
+        else:
+            print("FAILED ACCEPT")
+            self.FAILED_ACTION = True
+            sys.exit(1)
             
         return observation, agent
     
 
-    def action_decline(self, observation, agent, i, status_location):
+    def action_decline(self, observation, agent, r, status_location):
         '''
         DECLINE
         1. cek apakah status agent saat ini adalah idle
@@ -166,7 +180,16 @@ class FJSPEnv(gym.Env):
         return observation, agent
     
 
-    def action_continue(self, observation, agent, i, status_location):
+    def action_continue(self, observation, agent, r, status_location):
+        '''
+        CONTINUE
+        '''
+        if observation[self.state_operation_now_location] >0 and observation[status_location]==2:
+            observation[status_location]=3
+
+        if observation[status_location]==3:
+            observation[self.state_workbench_processing_time_remaining_location]-= 1
+
 
         return observation, agent
 

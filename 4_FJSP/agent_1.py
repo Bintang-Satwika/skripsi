@@ -1,5 +1,4 @@
 import numpy as np
-import random
 import math
 # ============================================================================
 # Agent: Merepresentasikan satu robot dengan workbench
@@ -25,7 +24,7 @@ class Agent:
         self.id = agent_id
         self.speed = speed
         self.workbench = {}
-        self.window_product=[None]*window_size
+        # self.window_product=[None]*window_size
         # self.buffer_job_to_workbench ={}
         # self.buffer_job_to_conveyor = {}
 

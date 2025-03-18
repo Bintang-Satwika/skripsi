@@ -2,7 +2,6 @@ from env_1 import FJSPEnv
 import numpy as np
 import random
 from tqdm import tqdm
-
 import json
 import os
 import numpy as np
@@ -10,12 +9,10 @@ import random
 # Model directory
 # Get the current directory
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-
 # Get the parent directory of the current directory
 PARENT_DIR = os.path.dirname(CURRENT_DIR)
-
 if __name__ == "__main__":
-    env = FJSPEnv(window_size=2, num_agents=6, max_steps=10, episode=1)
+    env = FJSPEnv(window_size=2, num_agents=6, max_steps=12, episode=1)
     rewards = {}
     makespan = {}
     energy= {}
@@ -43,9 +40,10 @@ if __name__ == "__main__":
             actions=[0]*6
             for r, state_agent in enumerate(state):
                 if state_agent[env.state_status_location_all[r]]==1 and state_agent[env.state_workbench_remaining_operation_location]==0 and state_agent[env.state_remaining_operation_location[0]]>0:
-                    print("current")
-                    print("Agent ", r, " is accept")
-                    actions[r]=2
+                    if int(1+env.max_remaining_operation-state_agent[env.state_remaining_operation_location[0]]) in state_agent[env.state_operation_capability_location]:
+                        print("current")
+                        print("Agent ", r, " is accept")
+                        actions[r]=2
             
 
 

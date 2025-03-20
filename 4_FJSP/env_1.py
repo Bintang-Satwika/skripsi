@@ -299,9 +299,9 @@ class FJSPEnv(gym.Env):
     def render(self):
         #Time Step: {self.step_count}")
         print("\nNEXT STATE RENDER:")
-        for a, agent in enumerate(self.agents):
+        #for a, agent in enumerate(self.agents):
             #print("self.conveyor.job_details:, ", self.conveyor.job_details)
-            print(f"Status Agent {agent.id} at position {int(self.observation_all[a][0])}: {int(self.observation_all[a][self.state_status_location_all[a]]) }")
-            print("window product: ", agent.window_product, "\nworkbench: ", agent.workbench, "total remaining unit:",agent.workbench_total_processing_unit,)
+            #print(f"Status Agent {agent.id} at position {int(self.observation_all[a][0])}: {int(self.observation_all[a][self.state_status_location_all[a]]) }")
+            #print("window product: ", agent.window_product, "\nworkbench: ", agent.workbench, "total remaining unit:",agent.workbench_total_processing_unit,)
         self.conveyor.display()
 

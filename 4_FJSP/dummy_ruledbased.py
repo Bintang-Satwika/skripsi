@@ -58,10 +58,10 @@ if __name__ == "__main__":
             print("actions:", actions)
 
             next_state, reward, done, truncated, info = env.step(actions)
-            env.render()
             print("state:\n", state)
             print("next_state:\n", next_state)
             print(next_state.shape)
+            env.render()
             print()
             reward = np.mean(reward)
             #reward= reward[0]

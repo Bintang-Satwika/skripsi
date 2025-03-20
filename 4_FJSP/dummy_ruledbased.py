@@ -11,6 +11,19 @@ import random
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 # Get the parent directory of the current directory
 PARENT_DIR = os.path.dirname(CURRENT_DIR)
+
+def FCFS_action(state, env):
+    actions=[0]*env.num_agents
+    for r, state_agent in enumerate(state):
+                if state_agent[env.state_status_location_all[r]]==1 and state_agent[env.state_workbench_remaining_operation_location]==0 and state_agent[env.state_remaining_operation_location[0]]>0:
+                    if int(1+env.max_remaining_operation-state_agent[env.state_remaining_operation_location[0]]) in state_agent[env.state_operation_capability_location]:
+                        print("current")
+                        print("Agent ", r, " is accept")
+                        actions[r]=2
+    return actions
+
+
+
 if __name__ == "__main__":
     env = FJSPEnv(window_size=2, num_agents=6, max_steps=12, episode=1)
     rewards = {}
@@ -36,23 +49,17 @@ if __name__ == "__main__":
                 print("All jobs are completed.")
                 break
 
-            #actions, masking=HITL_action(state, env)
-            actions=[0]*6
-            for r, state_agent in enumerate(state):
-                if state_agent[env.state_status_location_all[r]]==1 and state_agent[env.state_workbench_remaining_operation_location]==0 and state_agent[env.state_remaining_operation_location[0]]>0:
-                    if int(1+env.max_remaining_operation-state_agent[env.state_remaining_operation_location[0]]) in state_agent[env.state_operation_capability_location]:
-                        print("current")
-                        print("Agent ", r, " is accept")
-                        actions[r]=2
-            
+            actions=FCFS_action(state, env)
 
 
             if None in actions:
                 print("FAILED ACTION: ", actions)
                 break
             print("actions:", actions)
+
             next_state, reward, done, truncated, info = env.step(actions)
             env.render()
+            print("state:\n", state)
             print("next_state:\n", next_state)
             print(next_state.shape)
             print()

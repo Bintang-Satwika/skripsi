@@ -87,4 +87,3 @@ class CircularConveyor:
         print("Conveyor:", conveyor_state)
         print("Buffer:", self.buffer_jobs)
         print("Completed Products:", self.product_completed)
-

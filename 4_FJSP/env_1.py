@@ -123,7 +123,39 @@ class FJSPEnv(gym.Env):
 
             return self.initial_state(), {}
 
-    
+    def calculate_workbench_processing_time_remaining(self, observation, agent, r, type_action: str):
+        if observation[self.state_workbench_remaining_operation_location]==3:
+            observation[self.state_operation_now_location]=1
+            speed_current_operation=0
+        elif observation[self.state_workbench_remaining_operation_location]==2:
+            observation[self.state_operation_now_location]=2
+            speed_current_operation=1
+        elif observation[self.state_workbench_remaining_operation_location]==1:
+            observation[self.state_operation_now_location]=3
+            speed_current_operation=1
+        else:
+            print("ERROR: there is no remaining job")
+            sys.exit(1) 
+        
+        # perhitungan waktu untuk workbench processing time
+        speed= self.multi_agent_speeds[r][speed_current_operation]
+        print("speed: ", speed)
+        print("agent.workbench: ", agent.workbench)
+        jenis_product           = list(agent.workbench.keys())[0].split('-')[0]
+        print("jenis_product: ", jenis_product)
+        jenis_operasi           = observation[self.state_operation_now_location]-1
+        next_processing_time    = self.conveyor.base_processing_times[jenis_product][jenis_operasi]
+        print("next_processing_time: ", next_processing_time)
+        agent.processing_time_remaining =  agent.processing_time(next_processing_time, speed)
+        if type_action=="ACCEPT":
+            #agent.processing_time_remaining =  agent.processing_time( observation[self.state_processing_time_remaining_location[0]], speed)
+            pass
+        elif type_action=="CONTINUE":
+            observation[self.state_operation_now_location]=0
+
+        observation[self.state_workbench_processing_time_remaining_location]=float(agent.processing_time_remaining)
+        return observation, agent
+
     def action_accept(self, observation, agent, r, status_location):
         speed_current_operation=None
 
@@ -136,24 +168,8 @@ class FJSPEnv(gym.Env):
                 observation[self.state_workbench_degree_of_completion_location]=observation[self.state_degree_of_completion_location[0]]
                 agent.workbench["%s"%agent.window_product[0]]= self.conveyor.job_details.get(agent.window_product[0], [])
 
-                # operation now berubah dari 0 menjadi 1 atau 2 atau 3 sesuai 1+self.max_remaining_operation dikurangi remaining operation
-                if observation[self.state_workbench_remaining_operation_location]==3:
-                    observation[self.state_operation_now_location]=1
-                    speed_current_operation=0
-                elif observation[self.state_workbench_remaining_operation_location]==2:
-                    observation[self.state_operation_now_location]=2
-                    speed_current_operation=1
-                elif observation[self.state_workbench_remaining_operation_location]==1:
-                    observation[self.state_operation_now_location]=3
-                    speed_current_operation=1
-                else:
-                    print("ERROR: there is no remaining job")
-                    sys.exit(1) 
 
-                # perhitungan waktu untuk workbench processing time
-                speed= self.multi_agent_speeds[r][speed_current_operation]
-                agent.processing_time_remaining =  agent.processing_time( observation[self.state_processing_time_remaining_location[0]], speed)
-                observation[self.state_workbench_processing_time_remaining_location]=float(agent.processing_time_remaining)
+                observation, agent = self.calculate_workbench_processing_time_remaining(observation, agent, r, "ACCEPT")
                 jenis_product, panjang_operasi = agent.window_product[0].split('-')[0], len(list(agent.workbench.values())[0])
                 agent.workbench_total_processing_unit = sum(self.conveyor.base_processing_times[jenis_product][:panjang_operasi]) 
 
@@ -196,6 +212,12 @@ class FJSPEnv(gym.Env):
 
             elif observation[self.state_workbench_processing_time_remaining_location]==0:
                 observation[status_location]=4
+                observation[self.state_operation_now_location]=0
+                if  observation[self.state_workbench_remaining_operation_location] >0:
+                    observation[self.state_workbench_remaining_operation_location] -= 1
+                    observation[self.state_workbench_degree_of_completion_location] += 0
+                    observation, agent = self.calculate_workbench_processing_time_remaining(observation, agent, r, "CONTINUE")
+
 
 
         return observation, agent
@@ -255,17 +277,16 @@ class FJSPEnv(gym.Env):
                 for job_window in window_sections
             ]
 
-            name_jobs, operation_jobs = zip(*job_details_items)       
+            name_jobs, operation_jobs = zip(*job_details_items)
             # remaining operation bergeser sesuai window size
             for j, (name, operation) in enumerate(zip(name_jobs, operation_jobs)):
-                #print("j:", j, " name: ", name, "operation: ", operation)
                 next_observation_all[i, self.state_remaining_operation_location[j]] = len(operation) if len(operation)>0 else 0
                 if next_observation_all[i, self.state_remaining_operation_location[j]]==3:
-                    next_observation_all[i, self.state_processing_time_remaining_location[j]] = self.base_processing_times[name][operation[0]] if len(operation)>0 else 0
+                    next_observation_all[i, self.state_processing_time_remaining_location[j]] = self.base_processing_times[name][operation[0]-1] if len(operation)>0 else 0
                 elif next_observation_all[i, self.state_remaining_operation_location[j]]==2:
-                    next_observation_all[i, self.state_processing_time_remaining_location[j]] = self.base_processing_times[name][operation[1]] if len(operation)>0 else 0
+                    next_observation_all[i, self.state_processing_time_remaining_location[j]] = self.base_processing_times[name][operation[1]-1] if len(operation)>0 else 0
                 elif next_observation_all[i, self.state_remaining_operation_location[j]]==1:
-                    next_observation_all[i, self.state_processing_time_remaining_location[j]] = self.base_processing_times[name][operation[2]] if len(operation)>0 else 0
+                    next_observation_all[i, self.state_processing_time_remaining_location[j]] = self.base_processing_times[name][operation[2]-1] if len(operation)>0 else 0
                 else:
                     next_observation_all[i, self.state_processing_time_remaining_location[j]] = 0
 
@@ -299,9 +320,9 @@ class FJSPEnv(gym.Env):
     def render(self):
         #Time Step: {self.step_count}")
         print("\nNEXT STATE RENDER:")
-        #for a, agent in enumerate(self.agents):
+        for a, agent in enumerate(self.agents):
             #print("self.conveyor.job_details:, ", self.conveyor.job_details)
-            #print(f"Status Agent {agent.id} at position {int(self.observation_all[a][0])}: {int(self.observation_all[a][self.state_status_location_all[a]]) }")
-            #print("window product: ", agent.window_product, "\nworkbench: ", agent.workbench, "total remaining unit:",agent.workbench_total_processing_unit,)
+            print(f"Status Agent {agent.id} at position {int(self.observation_all[a][0])}: {int(self.observation_all[a][self.state_status_location_all[a]]) }")
+            print("window product: ", agent.window_product, "\nworkbench: ", agent.workbench, "total remaining unit:",agent.workbench_total_processing_unit,)
         self.conveyor.display()
 

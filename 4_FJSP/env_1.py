@@ -139,13 +139,15 @@ class FJSPEnv(gym.Env):
         
         # perhitungan waktu untuk workbench processing time
         speed= self.multi_agent_speeds[r][speed_current_operation]
-        print("speed: ", speed)
-        print("agent.workbench: ", agent.workbench)
+        #print("agent.id: ", agent.id, "speed: ", speed)
+        #print("agent.workbench: ", agent.workbench)
         jenis_product           = list(agent.workbench.keys())[0].split('-')[0]
-        print("jenis_product: ", jenis_product)
         jenis_operasi           = observation[self.state_operation_now_location]-1
+        # print(observation)
+        # print("observation[self.state_operation_now_location]: ", observation[self.state_operation_now_location])
+        # print("jenis product:",jenis_product, "jenis_operasi: ", jenis_operasi)
         next_processing_time    = self.conveyor.base_processing_times[jenis_product][jenis_operasi]
-        print("next_processing_time: ", next_processing_time)
+        #print("next_processing_time: ", next_processing_time)
         agent.processing_time_remaining =  agent.processing_time(next_processing_time, speed)
         if type_action=="ACCEPT":
             #agent.processing_time_remaining =  agent.processing_time( observation[self.state_processing_time_remaining_location[0]], speed)
@@ -213,10 +215,13 @@ class FJSPEnv(gym.Env):
             elif observation[self.state_workbench_processing_time_remaining_location]==0:
                 observation[status_location]=4
                 observation[self.state_operation_now_location]=0
+                # bila masih ada operasi yang tersisa pada workbench
                 if  observation[self.state_workbench_remaining_operation_location] >0:
                     observation[self.state_workbench_remaining_operation_location] -= 1
                     observation[self.state_workbench_degree_of_completion_location] += 0
-                    observation, agent = self.calculate_workbench_processing_time_remaining(observation, agent, r, "CONTINUE")
+                    # bila operasi yang tersisa pada workbench dapat dikerjakan oleh agent
+                    if int(observation[self.state_workbench_remaining_operation_location]) in observation[self.state_operation_capability_location]:
+                        observation, agent = self.calculate_workbench_processing_time_remaining(observation, agent, r, "CONTINUE")
 
 
 

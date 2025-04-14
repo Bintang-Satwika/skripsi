@@ -42,7 +42,7 @@ class FJSPEnv(gym.Env):
         # Konfigurasi agent
         # STATE 
         # Fixed positions (indeks 0-based): Agent1:3, Agent2:7, Agent3:11
-        self.agent_positions = [3, 7,11]
+        self.agent_positions = [3, 7, 11]
         self.agent_operation_capability = [[1,2], [2,3], [1,3]]
         # self.agent_operation_now = 0
         # self.agent_status_all = [0]*num_agents

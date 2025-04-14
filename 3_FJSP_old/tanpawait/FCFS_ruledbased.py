@@ -1,4 +1,4 @@
-from env_tanpawait_2 import FJSPEnv
+from env_tanpawait import FJSPEnv
 import numpy as np
 import random
 from tqdm import tqdm

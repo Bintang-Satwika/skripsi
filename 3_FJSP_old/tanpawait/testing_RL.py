@@ -4,11 +4,11 @@ import os
 import json
 import tensorflow as tf
 from tensorflow.keras import layers, models
-from env_tanpawait import FJSPEnv  
+from env_tanpawait_testing import FJSPEnv  
 from RULED_BASED import MASKING_action
 # Environment settings
 RENDER_MODE = None
-EPISODE_START =  400
+EPISODE_START =  300
 
 STATE_DIM = 9
 ACTION_DIM = 3
@@ -21,7 +21,7 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 # Get the parent directory of the current directory
 PARENT_DIR = os.path.dirname(CURRENT_DIR)
 print("PARENT_DIR:", PARENT_DIR)
-MODEL_DIR = os.path.join(PARENT_DIR,'tanpawait', "DQN_tanpawait_3")
+MODEL_DIR = os.path.join(PARENT_DIR,'tanpawait', "DQN_tanpawait_2")
 
 
 class DDQN_model:
@@ -66,6 +66,7 @@ dqn_network, target_dqn_network = loader.load_models(episode=EPISODE_START)
 bias_output = dqn_network.layers[-1].get_weights()[-1]
 print("bias_output:", bias_output)
 
+@tf.function
 def select_action_with_masking(state, action_mask_all):
 
     # Add batch dimension: state becomes (1, num_agents, state_dim)
@@ -77,7 +78,7 @@ def select_action_with_masking(state, action_mask_all):
 
     actions = tf.argmax(masked_q_values, axis=1)
 
-    return actions.numpy()
+    return actions
 
 def normalize(state):
     state_mins = np.array([3, 1, 1, 0, 0, 0, 0, 0, 0 ])
@@ -136,7 +137,7 @@ def run_env(num_episodes, render):
         }
 
         # Write the combined dictionary to a single JSON file
-        file_path = os.path.join(CURRENT_DIR, "Testing_RL_tanpawait_200ep.json")
+        file_path = os.path.join(CURRENT_DIR, "Testing_DQN_tanpawait_200ep.json")
         with open(file_path, "w") as f:
             json.dump(combined_data, f, indent=4)
 

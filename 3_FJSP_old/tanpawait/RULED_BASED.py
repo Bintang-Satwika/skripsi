@@ -75,7 +75,7 @@ def FCFS_action(states, env):
                   state[env.state_first_job_operation_location[0]] in state[env.state_operation_capability_location]
                  ):
                 actions.append(0) # Accept saat di conveyor yr
-            elif np.array_equal(state[env.state_first_job_operation_location], [0, 0, 0]):
+            elif np.array_equal(state[env.state_first_job_operation_location], 0):
                 actions.append(2) # continue
             else:
                 actions.append(1) # Decline

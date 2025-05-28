@@ -8,7 +8,7 @@ from env_tanpawait_testing import FJSPEnv
 from RULED_BASED import MASKING_action
 # Environment settings
 RENDER_MODE = None
-EPISODE_START =  300
+EPISODE_START =  600
 
 STATE_DIM = 9
 ACTION_DIM = 3

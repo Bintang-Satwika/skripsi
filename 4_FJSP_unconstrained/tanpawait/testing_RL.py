@@ -8,7 +8,7 @@ from env_tanpawait_testing import FJSPEnv
 from RULED_BASED import MASKING_action
 # Environment settings
 RENDER_MODE = None
-EPISODE_START =  300
+EPISODE_START =  500
 
 STATE_DIM = 9
 ACTION_DIM = 3
@@ -21,7 +21,7 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 # Get the parent directory of the current directory
 PARENT_DIR = os.path.dirname(CURRENT_DIR)
 print("PARENT_DIR:", PARENT_DIR)
-MODEL_DIR = os.path.join(PARENT_DIR,'tanpawait', "DQN_tanpawait_2")
+MODEL_DIR = os.path.join(PARENT_DIR,'tanpawait', "DQN_yr0_2_098")
 
 
 class DDQN_model:
@@ -72,11 +72,15 @@ def select_action_with_masking(state, action_mask_all):
     # Add batch dimension: state becomes (1, num_agents, state_dim)
     state_tensor = tf.convert_to_tensor([state], dtype=tf.float32)
     q_values = dqn_network(state_tensor)  # shape (1, num_agents, action_dim)
+    #tf.print("q_values:", q_values)
     q_values = q_values[0]  # shape (num_agents, action_dim)
+    #tf.print("q_values:", q_values)
     action_mask_tensor = tf.convert_to_tensor(action_mask_all, dtype=tf.bool)
     masked_q_values = tf.where(action_mask_tensor, q_values, tf.fill(tf.shape(q_values), -np.inf))
+    #tf.print("masked_q_values:", masked_q_values)
 
     actions = tf.argmax(masked_q_values, axis=1)
+    #tf.print("actions:", actions)
 
     return actions
 
@@ -88,13 +92,14 @@ def normalize(state):
     normalized_state = (state - state_mins) / (state_maxs - state_mins)
     return np.float32(normalized_state)
 
-# Running environment
 def run_env(num_episodes, render):
-    env = FJSPEnv(window_size=1, num_agents=3, max_steps=1000, episode=1)
-    num_episodes = 200
+    env = FJSPEnv(window_size=1, num_agents=3, max_steps=500, episode=1)
+    num_episodes = 1000
     rewards = {}
     makespan = {}
     energy= {}
+    success = {}
+    success_energy = {}
     for episode in range(1, num_episodes+1):
         state, info = env.reset(seed=1000+episode)
         if (episode-1) %1 == 0:
@@ -123,21 +128,31 @@ def run_env(num_episodes, render):
             break
 
 
-
+        if len(env.conveyor.product_completed) <21 or  env.step_count >= 250:
+            success[episode] = 0
+        else:
+            success[episode] = 1
+        if len(env.conveyor.product_completed) <21 or  env.step_count >= 250 or sum(env.agents_energy_consumption)>=250:
+            success_energy[episode] = 0
+        else:
+            success_energy[episode] = 1
         rewards[episode] = episode_reward
         makespan[episode] = env.step_count
         energy[episode] = sum(env.agents_energy_consumption)
+            
         print(f"Episode {episode}, Total Reward = {episode_reward:.2f}", "jumlah step:", env.step_count, 
-              "energy:", sum(env.agents_energy_consumption))
+              "energy:", sum(env.agents_energy_consumption),
+                "success:", success[episode], "success_energy:", success_energy[episode])
         # Save rewards to JSON
         combined_data = {
-            "rewards": rewards,
-            "makespan": makespan,
-            "energy": energy
-        }
+        "rewards": rewards,
+        "makespan": makespan,
+        "energy": energy,
+         "success": success,
+         "success_energy": success_energy,}
 
         # Write the combined dictionary to a single JSON file
-        file_path = os.path.join(CURRENT_DIR, "Testing_DQN_tanpawait_200ep.json")
+        file_path = os.path.join(CURRENT_DIR, "Testing_DQN_yr0_1000ep_500_60max.json")
         with open(file_path, "w") as f:
             json.dump(combined_data, f, indent=4)
 

@@ -1,0 +1,1 @@
+    while not done and not truncated: 

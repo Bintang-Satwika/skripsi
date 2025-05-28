@@ -1,4 +1,4 @@
-from env_tanpawait import FJSPEnv
+from env_tanpawait_testing_80 import FJSPEnv
 import numpy as np
 import random
 from tqdm import tqdm
@@ -92,7 +92,7 @@ if __name__ == "__main__":
         }
 
         # Write the combined dictionary to a single JSON file
-        file_path = os.path.join(CURRENT_DIR, "Testing_FCFS_1.json")
+        file_path = os.path.join(CURRENT_DIR, "Testing_FCFS_80%.json")
         with open(file_path, "w") as f:
             json.dump(combined_data, f, indent=4)
 
